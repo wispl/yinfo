@@ -39,6 +39,12 @@ pub struct PlayerUrl {
     expire_at: Instant,
 }
 
+impl Default for PlayerUrl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PlayerUrl {
     pub fn new() -> Self {
         PlayerUrl {

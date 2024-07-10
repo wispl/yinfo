@@ -1,6 +1,6 @@
 use yinfo::{
     clients::{ClientConfig, ClientType},
-    innertune::Innertune,
+    innertube::Innertube,
 };
 
 use std::fs;
