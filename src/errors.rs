@@ -19,6 +19,7 @@ pub enum Error {
     #[error("{0} is missing from {1}")]
     MissingField(&'static str, &'static str),
     #[error("failed to parse url {0}")]
-    UrlParse(#[from] url::ParseError)
-
+    UrlParse(#[from] url::ParseError),
+    #[error("unexpected error: {0}")]
+    Unexpected(String),
 }

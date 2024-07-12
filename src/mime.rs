@@ -46,7 +46,7 @@ impl FromStr for Mime {
 
         let format = between(input, "/", ";").parse::<Format>()?;
         let codecs = between(input, "\"", "\"");
-        let split = input.find('/').unwrap();
+        let split = input.find('/').ok_or(Error::MimeParse("/", String::new()))?;
         match &input[..split] {
             "audio" => Ok(Mime::Audio(format, codecs.parse::<Acodec>()?)),
             "video" => {

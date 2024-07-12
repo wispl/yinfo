@@ -13,6 +13,7 @@ pub struct Video {
 }
 
 impl Video {
+    #[must_use]
     pub fn best_audio(&self) -> Option<&VideoFormat> {
         // prefer audio quality > acodec > br > ext
         self.all_formats().max_by(|a, b| {
@@ -29,6 +30,7 @@ impl Video {
         })
     }
 
+    #[must_use]
     pub fn best_video(&self) -> Option<&VideoFormat> {
         // prefer quality > vcodec > br > ext
         self.all_formats().max_by(|a, b| {

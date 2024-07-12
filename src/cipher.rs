@@ -224,6 +224,10 @@ fn find_nfunc(js: &str) -> Option<&str> {
     }
 }
 
+/// TODO: convert panic to error
+/// # Panics
+///
+/// Panics if a regex fails to compile
 pub fn extract_nfunc(js: &str) -> Option<String> {
     let name = find_nfunc(js)?;
     let pattern = format!(

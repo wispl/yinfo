@@ -71,24 +71,40 @@ pub struct Innertube {
 }
 
 impl Innertube {
-    pub fn new(reqwest: Client, client: clients::ClientConfig) -> Self {
-        Innertube {
+    /// # Errors
+    ///
+    /// This generally should not fail unless rquickjs fails to create a runtime,
+    /// in which case out of memory is the case.
+    pub fn new(reqwest: Client, client: clients::ClientConfig) -> Result<Self, Error> {
+        let js_runtime = AsyncRuntime::new()
+            .map_err(|e| Error::Unexpected(e.to_string()))?;
+
+        Ok(Innertube {
             reqwest,
             client,
-            js_runtime: AsyncRuntime::new().unwrap(),
+            js_runtime,
             player_url: Arc::new(Mutex::new(PlayerUrl::new())),
             cipher_cache: DashMap::new(),
-        }
+        })
     }
 
+    /// # Errors
+    ///
+    /// This may normally fail as a result of a network error or cipher fails to parse.
+    /// An unexpected case is if rquickjs fails to create a context.
     pub async fn decipher_format(&self, format: &VideoFormat) -> Result<String, Error> {
         let player_url = self.get_player_url().await?;
         let pair = self.get_cipher_pair(&player_url).await?;
 
-        let context = AsyncContext::full(&self.js_runtime).await.unwrap();
+        let context = AsyncContext::full(&self.js_runtime).await
+            .map_err(|e| Error::Unexpected(e.to_string()))?;
         pair.value().apply(&context, format).await
     }
 
+    /// # Errors
+    ///
+    /// This may fail as a result of a network error. Cipher and json errors are unexpected and
+    /// indicates something in the library must be changed.
     pub async fn info(&self, video: &str) -> Result<Video, Error> {
         let player_url = self.get_player_url().await?;
         let pair = self.get_cipher_pair(&player_url).await?;
@@ -114,6 +130,10 @@ impl Innertube {
             .map_err(Error::Request)
     }
 
+    /// # Errors
+    ///
+    /// This may fail as a result of a network error. Cipher and json errors are unexpected and
+    /// indicates something in the library must be changed.
     pub async fn search(&self, query: &str) -> Result<Vec<String>, Error> {
         let data = json!({
             "query": query,
