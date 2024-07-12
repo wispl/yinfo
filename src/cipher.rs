@@ -140,13 +140,10 @@ impl Cipher {
                 Ok(x) => {
                     if x.starts_with("enhanced_except") {
                         return Err(Error::JSEnhancedExcept)
-                    } else {
-                        Ok(x)
                     }
+                    Ok(x)
                 }
-                Err(_) => {
-                    Err(Error::JSExecution(ctx.catch().get().unwrap()))
-                }
+                Err(_) => Err(Error::JSExecution(ctx.catch().get().unwrap()))
             }
         }).await
     }
@@ -158,12 +155,10 @@ fn find_main(js: &str) -> Option<&str> {
         r"\b[[:alnum:]]+\s*&&\s*[[:alnum:]]+\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*([a-zA-Z0-9$]+)\(",
         r"\bm=([a-zA-Z0-9$]{2,})\(decodeURIComponent\(h\.s\)\)",
         r"\bc&&\(c=([a-zA-Z0-9$]{2,})\(decodeURIComponent\(c\)\)",
-        r##"(?:\b|[^a-zA-Z0-9$])([a-zA-Z0-9$]{2,})\s*=\s*function\(\s*a\s*\)\s*\{\s*a\s*=\s*a\.split\(\s*""\s*\)(?:;[a-zA-Z0-9$]{2}\.[a-zA-Z0-9$]{2}\(a,\d+\))?"##,
-        r##"([a-zA-Z0-9$]+)\s*=\s*function\(\s*a\s*\)\s*\{\s*a\s*=\s*a\.split\(\s*""\s*\)"##,
+        r#"(?:\b|[^a-zA-Z0-9$])([a-zA-Z0-9$]{2,})\s*=\s*function\(\s*a\s*\)\s*\{\s*a\s*=\s*a\.split\(\s*""\s*\)(?:;[a-zA-Z0-9$]{2}\.[a-zA-Z0-9$]{2}\(a,\d+\))?"#,
+        r#"([a-zA-Z0-9$]+)\s*=\s*function\(\s*a\s*\)\s*\{\s*a\s*=\s*a\.split\(\s*""\s*\)"#,
     ];
-    static MAIN: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(&CANDIDATES.join("|")).unwrap()
-    });
+    static MAIN: Lazy<Regex> = Lazy::new(|| Regex::new(&CANDIDATES.join("|")).unwrap());
 
     if let Some(captures) = MAIN.captures(js) {
         for i in 1..=CANDIDATES.len() {
@@ -222,9 +217,8 @@ fn find_nfunc(js: &str) -> Option<&str> {
             let idx = idx.as_str().parse::<usize>().unwrap();
             let word = cap.get(1).unwrap().as_str().split(',').nth(idx).unwrap();
             return Some(word.trim());
-        } else {
-            None
         }
+        None
     } else {
         Some(nfunc)
     }
