@@ -54,7 +54,7 @@ impl Operation {
 
 pub struct Cipher {
     operations: Option<Vec<Operation>>,
-    pub nfunc: Option<String>,
+    nfunc: Option<String>,
     timestamp: Option<String>,
 }
 
@@ -112,7 +112,7 @@ impl Cipher {
             .ok_or(Error::Cipher("failed to extract operations!".to_owned()))?;
 
         let mut chars: Vec<char> = signature.chars().collect();
-        for op in operations.iter() {
+        for op in operations {
             match op {
                 Operation::Swap(x) => {
                     let pos = *x as usize % signature.len();
@@ -166,7 +166,7 @@ fn find_main(js: &str) -> Option<&str> {
     });
 
     if let Some(captures) = MAIN.captures(js) {
-        for i in 1 .. CANDIDATES.len() + 1 {
+        for i in 1..=CANDIDATES.len() {
             if let Some(val) = captures.get(i) {
                 return Some(val.as_str());
             }
@@ -178,17 +178,11 @@ fn find_main(js: &str) -> Option<&str> {
 fn extract_operations(js: &str) -> Option<Vec<Operation>> {
     const FUNC_BODY: &str = r#"=function\([[:alpha:]]\)\{a=a\.split\(""\);(.*);return a\.join\(""\)}"#;
     const FUNC_DEF: &str = r":function\(a(?:,[[:alpha:]])*\)\{(.*?)\}";
-    // const FUNC_BODY: &str = r##"=function\(\w\)\{a=a\.split\(""\);(.*);return a\.join\(""\)\}"##;
 
-    let Some(main) = find_main(js) else {
-        return None;
-    };
-
+    let main = find_main(js)?;
     let pattern = escape(main) + FUNC_BODY;
     let pattern = Regex::new(&pattern).unwrap();
-    let Some(captures) = pattern.captures(js) else {
-        return None;
-    };
+    let captures = pattern.captures(js)?;
 
     // get name and parameters of functions used inside the body
     let body = &captures[1];
@@ -216,10 +210,7 @@ fn find_nfunc(js: &str) -> Option<&str> {
             (?P<nfunc>[a-zA-Z0-9$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)"#).unwrap()
     );
 
-    let Some(captures) = NFUNC.captures(js) else {
-        return None;
-    };
-
+    let captures = NFUNC.captures(js)?;
     let nfunc = captures.name("nfunc").unwrap().as_str();
     // the real value is actually inside an array
     if let Some(idx) = captures.name("idx") {
@@ -240,10 +231,7 @@ fn find_nfunc(js: &str) -> Option<&str> {
 }
 
 pub fn extract_nfunc(js: &str) -> Option<String> {
-    let Some(name) = find_nfunc(js) else {
-        return None;
-    };
-
+    let name = find_nfunc(js)?;
     let pattern = format!(
         r#"(?xs)
         (?:
@@ -256,10 +244,7 @@ pub fn extract_nfunc(js: &str) -> Option<String> {
         escape(name)
     );
     let pattern = Regex::new(&pattern).unwrap();
-
-    let Some(captures) = pattern.captures(js) else {
-        return None;
-    };
+    let captures = pattern.captures(js)?;
 
     if let (Some(args), Some(code)) = (captures.name("args"),captures.name("code")) {
         Some(format!("function({}){}", args.as_str(), code.as_str()))
@@ -272,10 +257,7 @@ fn extract_timestamp(js: &str) -> Option<String> {
     static TIMESTAMP: Lazy<Regex> = Lazy::new(||
         Regex::new(r"(?:signatureTimestamp|sts):(\d+)").unwrap()
     );
-
-    let Some(captures) = TIMESTAMP.captures(js) else {
-        return None;
-    };
+    let captures = TIMESTAMP.captures(js)?;
     Some(captures[1].to_owned())
 }
 

@@ -33,8 +33,7 @@ impl Mime {
 
     pub fn format(&self) -> Format {
         match self {
-            Mime::Audio(format, _) => *format,
-            Mime::Video(format, _, _) => *format
+            Mime::Audio(format, _) | Mime::Video(format, _, _) => *format
         }
     }
 }

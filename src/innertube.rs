@@ -13,11 +13,7 @@ use reqwest::{
 
 use serde_json::json;
 
-use rquickjs::{
-    AsyncRuntime,
-    AsyncContext,
-    context::intrinsic::{Eval, Date},
-};
+use rquickjs::{AsyncRuntime, AsyncContext};
 use dashmap::{
     DashMap,
     Entry,
@@ -89,7 +85,7 @@ impl Innertube {
         let player_url = self.get_player_url().await?;
         let pair = self.get_cipher_pair(&player_url).await?;
 
-        let context = AsyncContext::custom::<(Eval, Date)>(&self.js_runtime).await.unwrap();
+        let context = AsyncContext::full(&self.js_runtime).await.unwrap();
         pair.value().apply(&context, format).await
     }
 
@@ -110,7 +106,7 @@ impl Innertube {
         });
 
 
-        self.build_request("player", data)
+        self.build_request("player", &data)
             .send()
             .await?
             .json::<Video>()
@@ -125,7 +121,7 @@ impl Innertube {
             "params": "EgIQAfABAQ==",
         });
 
-        Ok(self.build_request("search", data)
+        Ok(self.build_request("search", &data)
             .send()
             .await?
             .json::<WebSearch>()
@@ -211,7 +207,7 @@ impl Innertube {
     //     }
     // }
 
-    fn build_request(&self, endpoint: &str, data: serde_json::Value) -> RequestBuilder {
+    fn build_request(&self, endpoint: &str, data: &serde_json::Value) -> RequestBuilder {
         let url = format!(r"https:\\{}/youtubei/v1/{}", self.client.hostname(), endpoint);
         let mut headers = self.client.headers();
         let origin = format!(r"https:\\{}", self.client.hostname());
@@ -219,6 +215,6 @@ impl Innertube {
         self.reqwest.post(url)
             .headers(self.client.headers())
             .query(&[("key", self.client.api_key()), ("prettyPrint", "false")])
-            .json(&data)
+            .json(data)
     }
 }
