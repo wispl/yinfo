@@ -13,62 +13,36 @@ pub struct Video {
 }
 
 impl Video {
-    pub fn best_audio(&self) -> &VideoFormat {
-        // prefer quality > acodec > br > ext
+    pub fn best_audio(&self) -> Option<&VideoFormat> {
+        // prefer audio quality > acodec > br > ext
         self.all_formats().max_by(|a, b| {
-            let a_quality = a.audio_quality;
-            let b_quality = b.audio_quality;
-            let a_acodec = a.mime_type.acodec();
-            let b_acodec = b.mime_type.acodec();
-
-            if a_quality.xor(b_quality).is_some() {
-                return a_quality.cmp(&b_quality);
-            } else if let (Some(aq), Some(bq)) = (a_quality, b_quality) {
-                if aq != bq {
-                    return aq.cmp(&bq);
-                }
-            } else if a_acodec.xor(b_acodec).is_some() {
-                return a_quality.cmp(&b_quality);
-            } else if let (Some(ac), Some(bc)) = (a_acodec, b_acodec) {
-                if ac != bc {
-                    return ac.cmp(&bc);
-                }
+            if a.audio_quality != b.audio_quality {
+                return a.audio_quality.cmp(&b.audio_quality);
+            } else if a.mime_type.acodec() != b.mime_type.acodec() {
+                return a.mime_type.acodec().cmp(&b.mime_type.acodec());
             } else if a.bitrate != b.bitrate {
                 return a.bitrate.cmp(&b.bitrate);
             } else if a.mime_type.format() != b.mime_type.format() {
                 return a.mime_type.format().cmp(&b.mime_type.format());
             }
             Equal
-        }).unwrap()
+        })
     }
 
-    pub fn best_video(&self) -> &VideoFormat {
-        // prefer quality > acodec > br > ext
+    pub fn best_video(&self) -> Option<&VideoFormat> {
+        // prefer quality > vcodec > br > ext
         self.all_formats().max_by(|a, b| {
-            let a_quality = a.audio_quality;
-            let b_quality = b.audio_quality;
-            let a_acodec = a.mime_type.acodec();
-            let b_acodec = b.mime_type.acodec();
-
-            if a_quality.xor(b_quality).is_some() {
-                return a_quality.cmp(&b_quality);
-            } else if let (Some(aq), Some(bq)) = (a_quality, b_quality) {
-                if aq != bq {
-                    return aq.cmp(&bq);
-                }
-            } else if a_acodec.xor(b_acodec).is_some() {
-                return a_quality.cmp(&b_quality);
-            } else if let (Some(ac), Some(bc)) = (a_acodec, b_acodec) {
-                if ac != bc {
-                    return ac.cmp(&bc);
-                }
+            if a.quality != b.quality {
+                return a.quality.cmp(&b.quality);
+            } else if a.mime_type.vcodec() != b.mime_type.vcodec() {
+                return a.mime_type.vcodec().cmp(&b.mime_type.vcodec());
             } else if a.bitrate != b.bitrate {
                 return a.bitrate.cmp(&b.bitrate);
             } else if a.mime_type.format() != b.mime_type.format() {
                 return a.mime_type.format().cmp(&b.mime_type.format());
             }
             Equal
-        }).unwrap()
+        })
     }
 
     pub fn all_formats(&self) -> impl Iterator<Item = &VideoFormat> {
