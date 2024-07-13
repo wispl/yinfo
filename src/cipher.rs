@@ -19,13 +19,6 @@ use crate::{
     utils::between,
 };
 
-static REVERSE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?:return )?a\.reverse\(\)").unwrap());
-static SLICE: Lazy<Regex> = Lazy::new(|| Regex::new(r"return a\.slice\(b\)").unwrap());
-static SPLICE: Lazy<Regex> = Lazy::new(|| Regex::new(r"a\.splice\(0,b\)").unwrap());
-static SWAP: Lazy<Regex> = Lazy::new(||
-    Regex::new(r"var c=a\[0\];a\[0\]=a\[b%a\.length\];a\[b(?:%a.length|)\]=c(?:;return a)?").unwrap()
-);
-
 #[derive(Debug)]
 pub enum Operation {
     Swap(usize),
@@ -35,23 +28,37 @@ pub enum Operation {
 }
 
 impl Operation {
-    pub fn new(def: &str, param: &str) -> Self {
+    pub fn new(def: &str, param: &str) -> Result<Self, Error> {
+        // TODO: might be possible to use non-regex method and use string patterns instead
+        static REVERSE: Lazy<Regex> = Lazy::new(||
+            Regex::new(r"(?:return )?a\.reverse\(\)").unwrap()
+        );
+        static SLICE: Lazy<Regex> = Lazy::new(||
+            Regex::new(r"return a\.slice\(b\)").unwrap()
+        );
+        static SPLICE: Lazy<Regex> = Lazy::new(||
+            Regex::new(r"a\.splice\(0,b\)").unwrap()
+        );
+        static SWAP: Lazy<Regex> = Lazy::new(||
+            Regex::new(r"var c=a\[0\];a\[0\]=a\[b%a\.length\];a\[b(?:%a.length|)\]=c(?:;return a)?").unwrap()
+        );
+
         let param = param.parse::<usize>().unwrap_or(0);
         if REVERSE.is_match(def) {
-            Operation::Reverse()
+            Ok(Operation::Reverse())
         } else if SLICE.is_match(def) {
-            Operation::Slice(param)
+            Ok(Operation::Slice(param))
         } else if SPLICE.is_match(def) {
-            Operation::Splice(param)
+            Ok(Operation::Splice(param))
         } else if SWAP.is_match(def) {
-            Operation::Swap(param)
+            Ok(Operation::Swap(param))
         } else {
-            // TODO: handle error
-            Operation::Reverse()
+            Err(Error::Cipher(format!("invalid operation '{def}'")))
         }
     }
 }
 
+// TODO: might want an enum for this
 pub struct Cipher {
     operations: Option<Vec<Operation>>,
     nfunc: Option<String>,
@@ -164,6 +171,7 @@ fn find_main(js: &str) -> Option<&str> {
     None
 }
 
+// TODO: revist this and timestamp, and convert them to return result instead of option
 fn extract_operations(js: &str) -> Option<Vec<Operation>> {
     const FUNC_BODY: &str = r#"=function\([[:alpha:]]\)\{a=a\.split\(""\);(.*);return a\.join\(""\)}"#;
     const FUNC_DEF: &str = r":function\(a(?:,[[:alpha:]])*\)\{(.*?)\}";
@@ -188,7 +196,9 @@ fn extract_operations(js: &str) -> Option<Vec<Operation>> {
         .collect();
 
     // convert to operations which are done in rust
-    Some(iter.map(|(n, a)| Operation::new(defs.get(n).unwrap(), a)).collect())
+    iter.map(|(n, a)| Operation::new(defs.get(n).unwrap(), a))
+        .collect::<Result<Vec<Operation>, Error>>()
+        .ok()
 }
 
 fn find_nfunc(js: &str) -> Option<&str> {
