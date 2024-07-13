@@ -11,7 +11,7 @@ use url::{
 use once_cell::sync::Lazy;
 use regex::{Regex, escape};
 
-use rquickjs::{async_with, AsyncContext};
+use rquickjs::Ctx;
 
 use crate::{
     structs::VideoFormat,
@@ -71,9 +71,9 @@ impl Cipher {
         self.timestamp.as_deref()
     }
 
-    pub async fn apply(
+    pub fn apply(
         &self,
-        context: &AsyncContext,
+        context: Ctx<'_>,
         format: &VideoFormat
     ) -> Result<String, Error> {
         type QueryMap<'a> = HashMap<Cow<'a, str>, Cow<'a, str>>;
@@ -94,7 +94,7 @@ impl Cipher {
             }
 
             if let Some(n) = queries.get("n") {
-                let result = self.apply_nfunc(context, n).await?;
+                let result = self.apply_nfunc(context, n)?;
                 queries.insert(Cow::Borrowed("n"), Cow::Owned(result));
             }
             let queries = Serializer::new(String::new())
@@ -130,22 +130,20 @@ impl Cipher {
 
     // failing to apply nfunc is not an error, the video is still playable, just throttled,
     // when that is the case, None is returned.
-    async fn apply_nfunc(&self, ctx: &AsyncContext, nparam: &str) -> Result<String, Error> {
+    fn apply_nfunc(&self, ctx: Ctx, nparam: &str) -> Result<String, Error> {
         let nfunc = self.nfunc.as_ref()
             .ok_or(Error::Cipher("failed to extract n function!".to_owned()))?;
 
         let func = format!(r#"let n={nfunc};n("{nparam}")"#);
-        async_with!(ctx => |ctx| {
-            match ctx.eval::<String, String>(func) {
-                Ok(x) => {
-                    if x.starts_with("enhanced_except") {
-                        return Err(Error::JSEnhancedExcept)
-                    }
-                    Ok(x)
+        match ctx.eval::<String, String>(func) {
+            Ok(x) => {
+                if x.starts_with("enhanced_except") {
+                    return Err(Error::JSEnhancedExcept)
                 }
-                Err(_) => Err(Error::JSExecution(ctx.catch().get().unwrap()))
+                Ok(x)
             }
-        }).await
+            Err(_) => Err(Error::JSExecution(ctx.catch().get().unwrap()))
+        }
     }
 }
 

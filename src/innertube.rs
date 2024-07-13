@@ -13,7 +13,7 @@ use reqwest::{
 
 use serde_json::json;
 
-use rquickjs::{AsyncRuntime, AsyncContext};
+use rquickjs::{AsyncRuntime, AsyncContext, async_with};
 use dashmap::{
     DashMap,
     Entry,
@@ -98,7 +98,10 @@ impl Innertube {
 
         let context = AsyncContext::full(&self.js_runtime).await
             .map_err(|e| Error::Unexpected(e.to_string()))?;
-        pair.value().apply(&context, format).await
+
+        async_with!(context => |ctx| {
+            pair.value().apply(ctx, format)
+        }).await
     }
 
     /// # Errors
