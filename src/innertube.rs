@@ -44,7 +44,7 @@ impl Default for PlayerUrl {
 impl PlayerUrl {
     pub fn new() -> Self {
         PlayerUrl {
-            url: "".to_owned(),
+            url: String::new(),
             expire_at: Instant::now(),
         }
     }

@@ -20,7 +20,7 @@ impl WebSearch {
             .item_section_renderer.as_ref().unwrap()
             .contents
             .iter()
-            .filter_map(|x| x.video_renderer.as_ref().map(|x| x.video_id.to_owned()))
+            .filter_map(|x| x.video_renderer.as_ref().map(|x| x.video_id.to_string()))
             .collect()
     }
 }
