@@ -28,15 +28,15 @@ static SWAP: Lazy<Regex> = Lazy::new(||
 
 #[derive(Debug)]
 pub enum Operation {
-    Swap(i32),
+    Swap(usize),
     Reverse(),
-    Slice(i32),
-    Splice(i32),
+    Slice(usize),
+    Splice(usize),
 }
 
 impl Operation {
     pub fn new(def: &str, param: &str) -> Self {
-        let param = param.parse::<i32>().unwrap_or(0);
+        let param = param.parse::<usize>().unwrap_or(0);
         if REVERSE.is_match(def) {
             Operation::Reverse()
         } else if SLICE.is_match(def) {
@@ -107,22 +107,18 @@ impl Cipher {
         }
     }
 
-    pub fn apply_operations(&self, signature: &str) -> Result<String, Error> {
+    fn apply_operations(&self, signature: &str) -> Result<String, Error> {
         let operations = self.operations.as_ref()
             .ok_or(Error::Cipher("failed to extract operations!".to_owned()))?;
 
         let mut chars: Vec<char> = signature.chars().collect();
         for op in operations {
             match op {
-                Operation::Swap(x) => {
-                    let pos = *x as usize % signature.len();
-                    chars.swap(0, pos);
-                }
+                Operation::Swap(x) => chars.swap(0, x % signature.len()),
                 Operation::Reverse() => chars.reverse(),
                 Operation::Splice(x) | Operation::Slice(x) => {
-                    let end = *x as usize;
-                    chars.drain(0..end);
-                }
+                    chars.drain(0..*x);
+                },
             }
         }
         Ok(chars.into_iter().collect())
