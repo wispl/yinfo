@@ -182,7 +182,6 @@ fn extract_operations(js: &str) -> Option<Vec<Operation>> {
 
     // find definitions of each function used
     let names = iter.clone().map(|(n, _)| n).collect::<Vec<&str>>().join("|");
-    // TODO: searches are duplicated
     let pattern = Regex::new(&("(".to_owned() + &names + ")" + FUNC_DEF)).unwrap();
     let defs: HashMap<&str, &str> = pattern.captures_iter(js)
         .map(|c| (c.get(1).unwrap().as_str(), c.get(2).unwrap().as_str()))
@@ -194,7 +193,6 @@ fn extract_operations(js: &str) -> Option<Vec<Operation>> {
 
 fn find_nfunc(js: &str) -> Option<&str> {
     static NFUNC: Lazy<Regex> = Lazy::new(||
-        // Regex::new(r#"\.get\("n"\)\)&&\(b=(?P<nfunc>[a-zA-Z0-9$]+)(?:\[(?P<idx>\d+)\])?\([[:alnum:]]\)"#).unwrap()
         Regex::new(r#"(?x)(?:\.get\("n"\)\)&&\(b=|b=String\.fromCharCode\(110\),c=a\.get\(b\)\)&&\(c=)
             (?P<nfunc>[a-zA-Z0-9$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)"#).unwrap()
     );
