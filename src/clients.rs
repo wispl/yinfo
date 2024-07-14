@@ -44,9 +44,15 @@ impl ClientConfig {
 
         if self.is_base() {
             client.insert("clientScreen".to_owned(), "EMBED".into());
-            context.insert("thirdParty".to_owned(), json!({ "embedUrl": "https://www.youtube.com/" }));
+            context.insert(
+                "thirdParty".to_owned(),
+                json!({ "embedUrl": "https://www.youtube.com/" }),
+            );
         } else {
-            context.insert("thirdParty".to_owned(), json!({ "embedUrl": "https://www.youtube.com/" }));
+            context.insert(
+                "thirdParty".to_owned(),
+                json!({ "embedUrl": "https://www.youtube.com/" }),
+            );
         }
 
         context.insert("client".to_owned(), client.into());
@@ -54,7 +60,10 @@ impl ClientConfig {
     }
 
     pub fn is_base(&self) -> bool {
-        matches!(self.client_type, ClientType::Web | ClientType::Android | ClientType::IOS)
+        matches!(
+            self.client_type,
+            ClientType::Web | ClientType::Android | ClientType::IOS
+        )
     }
 
     pub fn hostname(&self) -> &str {
@@ -69,11 +78,17 @@ impl ClientConfig {
         let mut headers = HeaderMap::new();
 
         headers.insert("content-type", HeaderValue::from_static("application/json"));
-        headers.insert("x-youtube-client-name", HeaderValue::from_static(self.context_client_name));
-        headers.insert("x-youtube-client-version", HeaderValue::from_static(self.client.version));
+        headers.insert(
+            "x-youtube-client-name",
+            HeaderValue::from_static(self.context_client_name),
+        );
+        headers.insert(
+            "x-youtube-client-version",
+            HeaderValue::from_static(self.client.version),
+        );
         headers.insert(
             "user-agent",
-            HeaderValue::from_static(self.client.user_agent.unwrap_or(DEFAULT_USER_AGENT))
+            HeaderValue::from_static(self.client.user_agent.unwrap_or(DEFAULT_USER_AGENT)),
         );
 
         headers
@@ -132,4 +147,3 @@ impl ClientConfig {
         }
     }
 }
-

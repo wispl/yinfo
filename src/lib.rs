@@ -1,8 +1,8 @@
-pub mod innertube;
+pub mod cipher;
 pub mod clients;
 pub mod errors;
+pub mod innertube;
 pub mod mime;
-pub mod structs;
-pub mod cipher;
-mod utils;
 mod query;
+pub mod structs;
+mod utils;

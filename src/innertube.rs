@@ -5,27 +5,19 @@ use std::{
 
 use tokio::sync::Mutex;
 
-use reqwest::{
-    RequestBuilder,
-    header::HeaderValue,
-    Client,
-};
+use reqwest::{header::HeaderValue, Client, RequestBuilder};
 
 use serde_json::json;
 
-use rquickjs::{AsyncRuntime, AsyncContext, async_with};
-use dashmap::{
-    DashMap,
-    Entry,
-    mapref::one::Ref,
-};
+use dashmap::{mapref::one::Ref, DashMap, Entry};
+use rquickjs::{async_with, AsyncContext, AsyncRuntime};
 
 use crate::{
+    cipher::Cipher,
     clients,
     errors::Error,
-    structs::{Video, VideoFormat},
-    cipher::Cipher,
     query::WebSearch,
+    structs::{Video, VideoFormat},
     utils::between,
 };
 
@@ -60,14 +52,13 @@ impl PlayerUrl {
     }
 }
 
-
 pub struct Innertube {
     client: clients::ClientConfig,
     reqwest: Client,
     js_runtime: AsyncRuntime,
 
     player_url: Arc<Mutex<PlayerUrl>>,
-    cipher_cache: DashMap<String, Cipher>
+    cipher_cache: DashMap<String, Cipher>,
 }
 
 impl Innertube {
@@ -76,8 +67,7 @@ impl Innertube {
     /// This generally should not fail unless rquickjs fails to create a runtime,
     /// in which case out of memory is the case.
     pub fn new(reqwest: Client, client: clients::ClientConfig) -> Result<Self, Error> {
-        let js_runtime = AsyncRuntime::new()
-            .map_err(|e| Error::Unexpected(e.to_string()))?;
+        let js_runtime = AsyncRuntime::new().map_err(|e| Error::Unexpected(e.to_string()))?;
 
         Ok(Innertube {
             reqwest,
@@ -96,12 +86,14 @@ impl Innertube {
         let player_url = self.get_player_url().await?;
         let pair = self.get_cipher_pair(&player_url).await?;
 
-        let context = AsyncContext::full(&self.js_runtime).await
+        let context = AsyncContext::full(&self.js_runtime)
+            .await
             .map_err(|e| Error::Unexpected(e.to_string()))?;
 
         async_with!(context => |ctx| {
             pair.value().apply(ctx, format)
-        }).await
+        })
+        .await
     }
 
     /// # Errors
@@ -124,7 +116,6 @@ impl Innertube {
             "racyCheckOk": true,
         });
 
-
         self.build_request("player", &data)
             .send()
             .await?
@@ -144,7 +135,8 @@ impl Innertube {
             "params": "EgIQAfABAQ==",
         });
 
-        Ok(self.build_request("search", &data)
+        Ok(self
+            .build_request("search", &data)
             .send()
             .await?
             .json::<WebSearch>()
@@ -157,21 +149,19 @@ impl Innertube {
         // TODO: investigat deadlock?
         match self.cipher_cache.entry(player_url.to_string()) {
             Entry::Vacant(entry) => {
-                let player_js = self.reqwest.get(player_url)
-                    .send()
-                    .await?
-                    .text()
-                    .await?;
+                let player_js = self.reqwest.get(player_url).send().await?.text().await?;
                 Ok(entry.insert(Cipher::new(&player_js)).downgrade())
             }
-            Entry::Occupied(entry) => Ok(entry.into_ref().downgrade())
+            Entry::Occupied(entry) => Ok(entry.into_ref().downgrade()),
         }
     }
 
-    async fn get_player_url(&self) -> Result<String, Error>{
+    async fn get_player_url(&self) -> Result<String, Error> {
         let mut player_url = self.player_url.lock().await;
         if player_url.is_expired() {
-            let res = self.reqwest.get("https://www.youtube.com/embed/")
+            let res = self
+                .reqwest
+                .get("https://www.youtube.com/embed/")
                 .send()
                 .await?
                 .text()
@@ -231,11 +221,16 @@ impl Innertube {
     // }
 
     fn build_request(&self, endpoint: &str, data: &serde_json::Value) -> RequestBuilder {
-        let url = format!(r"https:\\{}/youtubei/v1/{}", self.client.hostname(), endpoint);
+        let url = format!(
+            r"https:\\{}/youtubei/v1/{}",
+            self.client.hostname(),
+            endpoint
+        );
         let mut headers = self.client.headers();
         let origin = format!(r"https:\\{}", self.client.hostname());
         headers.insert("Origin", HeaderValue::from_str(&origin).unwrap());
-        self.reqwest.post(url)
+        self.reqwest
+            .post(url)
             .headers(self.client.headers())
             .query(&[("key", self.client.api_key()), ("prettyPrint", "false")])
             .json(data)

@@ -1,23 +1,16 @@
-use std::{
-    collections::HashMap,
-    borrow::Cow,
-};
+use std::{borrow::Cow, collections::HashMap};
 
 use url::{
-    Url,
     form_urlencoded::{parse, Serializer},
+    Url,
 };
 
 use once_cell::sync::Lazy;
-use regex::{Regex, escape};
+use regex::{escape, Regex};
 
 use rquickjs::Ctx;
 
-use crate::{
-    structs::VideoFormat,
-    errors::Error,
-    utils::between,
-};
+use crate::{errors::Error, structs::VideoFormat, utils::between};
 
 #[derive(Debug)]
 pub enum Operation {
@@ -30,18 +23,14 @@ pub enum Operation {
 impl Operation {
     pub fn new(def: &str, param: &str) -> Result<Self, Error> {
         // TODO: might be possible to use non-regex method and use string patterns instead
-        static REVERSE: Lazy<Regex> = Lazy::new(||
-            Regex::new(r"(?:return )?a\.reverse\(\)").unwrap()
-        );
-        static SLICE: Lazy<Regex> = Lazy::new(||
-            Regex::new(r"return a\.slice\(b\)").unwrap()
-        );
-        static SPLICE: Lazy<Regex> = Lazy::new(||
-            Regex::new(r"a\.splice\(0,b\)").unwrap()
-        );
-        static SWAP: Lazy<Regex> = Lazy::new(||
-            Regex::new(r"var c=a\[0\];a\[0\]=a\[b%a\.length\];a\[b(?:%a.length|)\]=c(?:;return a)?").unwrap()
-        );
+        static REVERSE: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r"(?:return )?a\.reverse\(\)").unwrap());
+        static SLICE: Lazy<Regex> = Lazy::new(|| Regex::new(r"return a\.slice\(b\)").unwrap());
+        static SPLICE: Lazy<Regex> = Lazy::new(|| Regex::new(r"a\.splice\(0,b\)").unwrap());
+        static SWAP: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r"var c=a\[0\];a\[0\]=a\[b%a\.length\];a\[b(?:%a.length|)\]=c(?:;return a)?")
+                .unwrap()
+        });
 
         let param = param.parse::<usize>().unwrap_or(0);
         if REVERSE.is_match(def) {
@@ -78,19 +67,19 @@ impl Cipher {
         self.timestamp.as_deref()
     }
 
-    pub fn apply(
-        &self,
-        context: Ctx<'_>,
-        format: &VideoFormat
-    ) -> Result<String, Error> {
+    pub fn apply(&self, context: Ctx<'_>, format: &VideoFormat) -> Result<String, Error> {
         type QueryMap<'a> = HashMap<Cow<'a, str>, Cow<'a, str>>;
         // contains s, sp, and url
-        let signature_map = format.signature_cipher.as_ref()
+        let signature_map = format
+            .signature_cipher
+            .as_ref()
             .map(|x| parse(x.as_bytes()).collect::<QueryMap<'_>>());
 
         if let Some(map) = signature_map {
-            let url = map.get("url")
-                .ok_or(Error::MissingField("url parameter", "VideoFormat.signature"))?;
+            let url = map.get("url").ok_or(Error::MissingField(
+                "url parameter",
+                "VideoFormat.signature",
+            ))?;
             let mut url = Url::parse(url)?;
             let mut queries: QueryMap<'_> = url.query_pairs().collect();
 
@@ -110,12 +99,17 @@ impl Cipher {
             url.set_query(Some(&queries));
             Ok(url.into())
         } else {
-            format.url.clone().ok_or(Error::MissingField("url", "VideoFormat"))
+            format
+                .url
+                .clone()
+                .ok_or(Error::MissingField("url", "VideoFormat"))
         }
     }
 
     fn apply_operations(&self, signature: &str) -> Result<String, Error> {
-        let operations = self.operations.as_ref()
+        let operations = self
+            .operations
+            .as_ref()
             .ok_or(Error::Cipher("failed to extract operations!".to_owned()))?;
 
         let mut chars: Vec<char> = signature.chars().collect();
@@ -125,7 +119,7 @@ impl Cipher {
                 Operation::Reverse() => chars.reverse(),
                 Operation::Splice(x) | Operation::Slice(x) => {
                     chars.drain(0..*x);
-                },
+                }
             }
         }
         Ok(chars.into_iter().collect())
@@ -134,18 +128,20 @@ impl Cipher {
     // failing to apply nfunc is not an error, the video is still playable, just throttled,
     // when that is the case, None is returned.
     fn apply_nfunc(&self, ctx: Ctx, nparam: &str) -> Result<String, Error> {
-        let nfunc = self.nfunc.as_ref()
+        let nfunc = self
+            .nfunc
+            .as_ref()
             .ok_or(Error::Cipher("failed to extract n function!".to_owned()))?;
 
         let func = format!(r#"let n={nfunc};n("{nparam}")"#);
         match ctx.eval::<String, String>(func) {
             Ok(x) => {
                 if x.starts_with("enhanced_except") {
-                    return Err(Error::JSEnhancedExcept)
+                    return Err(Error::JSEnhancedExcept);
                 }
                 Ok(x)
             }
-            Err(_) => Err(Error::JSExecution(ctx.catch().get().unwrap()))
+            Err(_) => Err(Error::JSExecution(ctx.catch().get().unwrap())),
         }
     }
 }
@@ -173,7 +169,8 @@ fn find_main(js: &str) -> Option<&str> {
 
 // TODO: revist this and timestamp, and convert them to return result instead of option
 fn extract_operations(js: &str) -> Option<Vec<Operation>> {
-    const FUNC_BODY: &str = r#"=function\([[:alpha:]]\)\{a=a\.split\(""\);(.*);return a\.join\(""\)}"#;
+    const FUNC_BODY: &str =
+        r#"=function\([[:alpha:]]\)\{a=a\.split\(""\);(.*);return a\.join\(""\)}"#;
     const FUNC_DEF: &str = r":function\(a(?:,[[:alpha:]])*\)\{(.*?)\}";
 
     let main = find_main(js)?;
@@ -183,15 +180,19 @@ fn extract_operations(js: &str) -> Option<Vec<Operation>> {
 
     // get name and parameters of functions used inside the body
     let body = &captures[1];
-    let iter = body.split(';').map(|s| (
-            between(s, ".", "("),
-            between(s, ",", ")")
-    ));
+    let iter = body
+        .split(';')
+        .map(|s| (between(s, ".", "("), between(s, ",", ")")));
 
     // find definitions of each function used
-    let names = iter.clone().map(|(n, _)| n).collect::<Vec<&str>>().join("|");
+    let names = iter
+        .clone()
+        .map(|(n, _)| n)
+        .collect::<Vec<&str>>()
+        .join("|");
     let pattern = Regex::new(&("(".to_owned() + &names + ")" + FUNC_DEF)).unwrap();
-    let defs: HashMap<&str, &str> = pattern.captures_iter(js)
+    let defs: HashMap<&str, &str> = pattern
+        .captures_iter(js)
         .map(|c| (c.get(1).unwrap().as_str(), c.get(2).unwrap().as_str()))
         .collect();
 
@@ -202,10 +203,13 @@ fn extract_operations(js: &str) -> Option<Vec<Operation>> {
 }
 
 fn find_nfunc(js: &str) -> Option<&str> {
-    static NFUNC: Lazy<Regex> = Lazy::new(||
-        Regex::new(r#"(?x)(?:\.get\("n"\)\)&&\(b=|b=String\.fromCharCode\(110\),c=a\.get\(b\)\)&&\(c=)
-            (?P<nfunc>[a-zA-Z0-9$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)"#).unwrap()
-    );
+    static NFUNC: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(
+            r#"(?x)(?:\.get\("n"\)\)&&\(b=|b=String\.fromCharCode\(110\),c=a\.get\(b\)\)&&\(c=)
+            (?P<nfunc>[a-zA-Z0-9$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)"#,
+        )
+        .unwrap()
+    });
 
     let captures = NFUNC.captures(js)?;
     let nfunc = captures.name("nfunc").unwrap().as_str();
@@ -246,7 +250,7 @@ pub fn extract_nfunc(js: &str) -> Option<String> {
     let pattern = Regex::new(&pattern).unwrap();
     let captures = pattern.captures(js)?;
 
-    if let (Some(args), Some(code)) = (captures.name("args"),captures.name("code")) {
+    if let (Some(args), Some(code)) = (captures.name("args"), captures.name("code")) {
         Some(format!("function({}){}", args.as_str(), code.as_str()))
     } else {
         None
@@ -254,10 +258,8 @@ pub fn extract_nfunc(js: &str) -> Option<String> {
 }
 
 fn extract_timestamp(js: &str) -> Option<String> {
-    static TIMESTAMP: Lazy<Regex> = Lazy::new(||
-        Regex::new(r"(?:signatureTimestamp|sts):(\d+)").unwrap()
-    );
+    static TIMESTAMP: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"(?:signatureTimestamp|sts):(\d+)").unwrap());
     let captures = TIMESTAMP.captures(js)?;
     Some(captures[1].to_owned())
 }
-

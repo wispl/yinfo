@@ -48,7 +48,8 @@ impl Video {
     }
 
     pub fn all_formats(&self) -> impl Iterator<Item = &VideoFormat> {
-        self.streaming_data.adaptive_formats
+        self.streaming_data
+            .adaptive_formats
             .iter()
             .chain(self.streaming_data.formats.iter().flatten())
     }

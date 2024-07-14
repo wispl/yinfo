@@ -1,11 +1,6 @@
-use std::{str::FromStr, fmt};
+use std::{fmt, str::FromStr};
 
-use serde::de::{
-    self,
-    Visitor,
-    Deserialize,
-    Deserializer,
-};
+use serde::de::{self, Deserialize, Deserializer, Visitor};
 
 use crate::errors::Error;
 use crate::utils::between;
@@ -20,20 +15,20 @@ impl Mime {
     pub fn acodec(&self) -> Option<Acodec> {
         match self {
             Mime::Audio(_, acodec) => Some(*acodec),
-            Mime::Video(_, _, acodec) => *acodec
+            Mime::Video(_, _, acodec) => *acodec,
         }
     }
 
     pub fn vcodec(&self) -> Option<Vcodec> {
         match self {
             Mime::Audio(_, _) => None,
-            Mime::Video(_, vcodec, _) => Some(*vcodec)
+            Mime::Video(_, vcodec, _) => Some(*vcodec),
         }
     }
 
     pub fn format(&self) -> Format {
         match self {
-            Mime::Audio(format, _) | Mime::Video(format, _, _) => *format
+            Mime::Audio(format, _) | Mime::Video(format, _, _) => *format,
         }
     }
 }
@@ -46,7 +41,9 @@ impl FromStr for Mime {
 
         let format = between(input, "/", ";").parse::<Format>()?;
         let codecs = between(input, "\"", "\"");
-        let split = input.find('/').ok_or(Error::MimeParse("/", String::new()))?;
+        let split = input
+            .find('/')
+            .ok_or(Error::MimeParse("/", String::new()))?;
         match &input[..split] {
             "audio" => Ok(Mime::Audio(format, codecs.parse::<Acodec>()?)),
             "video" => {
@@ -59,7 +56,7 @@ impl FromStr for Mime {
                     Ok(Mime::Video(format, codecs.parse::<Vcodec>()?, None))
                 }
             }
-            _ => Err(Error::MimeParse("mime type", input[..split].to_owned()))
+            _ => Err(Error::MimeParse("mime type", input[..split].to_owned())),
         }
     }
 }
@@ -67,7 +64,6 @@ impl FromStr for Mime {
 struct MimeVisitor;
 
 impl<'de> Visitor<'de> for MimeVisitor {
-
     type Value = Mime;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -98,7 +94,6 @@ pub enum Format {
 }
 
 impl FromStr for Format {
-
     type Err = Error;
 
     fn from_str(input: &str) -> Result<Format, Error> {
@@ -122,7 +117,6 @@ pub enum Vcodec {
 }
 
 impl FromStr for Vcodec {
-
     type Err = Error;
 
     fn from_str(input: &str) -> Result<Vcodec, Error> {
@@ -148,7 +142,6 @@ pub enum Acodec {
 }
 
 impl FromStr for Acodec {
-
     type Err = Error;
 
     fn from_str(input: &str) -> Result<Acodec, Error> {

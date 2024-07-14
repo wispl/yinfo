@@ -16,8 +16,13 @@ impl WebSearch {
             .two_column_search_results_renderer
             .primary_contents
             .section_list_renderer
-            .contents.iter().find(|x| x.item_section_renderer.is_some()).unwrap()
-            .item_section_renderer.as_ref().unwrap()
+            .contents
+            .iter()
+            .find(|x| x.item_section_renderer.is_some())
+            .unwrap()
+            .item_section_renderer
+            .as_ref()
+            .unwrap()
             .contents
             .iter()
             .filter_map(|x| x.video_renderer.as_ref().map(|x| x.video_id.to_string()))
@@ -58,7 +63,7 @@ struct Content {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ItemSectionRenderer {
-    pub contents: Vec<Content2>
+    pub contents: Vec<Content2>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -72,5 +77,3 @@ struct Content2 {
 struct VideoRenderer {
     pub video_id: String,
 }
-
-
