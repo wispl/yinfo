@@ -12,6 +12,9 @@ use serde_json::json;
 use dashmap::{mapref::one::Ref, DashMap, Entry};
 use rquickjs::{async_with, AsyncContext, AsyncRuntime};
 
+use once_cell::sync::Lazy;
+use regex::Regex;
+
 use crate::{
     cipher::Cipher,
     clients,
@@ -101,6 +104,7 @@ impl Innertube {
     /// This may fail as a result of a network error. Cipher and json errors are unexpected and
     /// indicates something in the library must be changed.
     pub async fn info(&self, video: &str) -> Result<Video, Error> {
+        let video = get_video_id(video).ok_or(Error::NotYoutubeUrl(video.to_owned()))?;
         let player_url = self.get_player_url().await?;
         let pair = self.get_cipher_pair(&player_url).await?;
         let cipher = pair.value();
@@ -234,5 +238,74 @@ impl Innertube {
             .headers(self.client.headers())
             .query(&[("key", self.client.api_key()), ("prettyPrint", "false")])
             .json(data)
+    }
+}
+
+fn get_video_id(url: &str) -> Option<&str> {
+    // from: https://stackoverflow.com/questions/5830387/how-do-i-find-all-youtube-video-ids-in-a-string-using-a-regex?noredirect=1&lq=1
+    // this is a little lax however, but should suffice for most cases
+    const YOUTUBE_URL: &str = r"(?xs)
+        (?:https?:)?//              # protocol
+        (?:[[:alnum:]-]+\.)?        # optional subdomain
+        (?:                         # hostname
+         youtu\.be/
+         | youtube(?:-nocookie)?
+         \.com
+         \S*?                       # whatever until we find the id
+         [^[:word:]\s-]             #
+        )
+        ([[:word:]w-]{11})          # id
+    ";
+    static PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(YOUTUBE_URL).unwrap());
+    if let Some(cap) = PATTERN.captures(url) {
+        return Some(cap.get(1).unwrap().as_str());
+    } else if url.len() == 11
+        && url
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+    {
+        return Some(url);
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_video_id() {
+        let strings = [
+            "http://youtu.be/NLqAF9hrVbY",
+            "http://www.youtube.com/embed/NLqAF9hrVbY",
+            "http://www.youtube.com/v/NLqAF9hrVbY?fs=1&hl=en_US",
+            "http://www.youtube.com/watch?v=NLqAF9hrVbY",
+        ];
+        for str in strings {
+            assert_eq!(get_video_id(str), Some("NLqAF9hrVbY"));
+        }
+    }
+
+    #[test]
+    fn test_get_video_id_id_only() {
+        let strings = ["NLqAF9hrVbY", "IB3lcPjvWLA", "BaW_jenozKc", "a9LDPn-MO4I"];
+        for str in strings {
+            assert_eq!(get_video_id(str), Some(str));
+        }
+    }
+
+    #[test]
+    fn test_get_video_id_bad() {
+        let strings = [
+            "NLqAF9hrVbYAFNE",
+            "IB3lcPjvW",
+            "IB3lcPjv!",
+            "https://example.com/",
+            "http://youtu.be/v=NLqAF9hrVbY",
+            "http://www.youtube.com/     NLqAF9hrVbY",
+        ];
+        for str in strings {
+            assert_eq!(get_video_id(str), None);
+        }
     }
 }

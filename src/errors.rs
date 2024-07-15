@@ -22,4 +22,6 @@ pub enum Error {
     UrlParse(#[from] url::ParseError),
     #[error("unexpected error: {0}")]
     Unexpected(String),
+    #[error("{0} is not a valid YouTube url")]
+    NotYoutubeUrl(String),
 }
