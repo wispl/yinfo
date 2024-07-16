@@ -1,6 +1,7 @@
 use std::{
     sync::Arc,
     time::{Duration, Instant},
+    borrow::ToOwned,
 };
 
 use tokio::sync::Mutex;
@@ -127,6 +128,7 @@ impl Innertube {
                 }
             }
 
+            // TODO: add retry, need to find example video of one first though
             return self.build_request("player", config, &data.into())
                 .send()
                 .await?
@@ -217,8 +219,8 @@ impl Innertube {
             let api_key = &json["INNERTUBE_API_KEY"];
 
             Ok((
-                version.as_str().map(|s| s.to_owned()),
-                api_key.as_str().map(|s| s.to_owned())
+                version.as_str().map(ToOwned::to_owned),
+                api_key.as_str().map(ToOwned::to_owned)
             ))
         } else {
             Err(Error::Cipher("failed to extract operations!".to_owned()))
