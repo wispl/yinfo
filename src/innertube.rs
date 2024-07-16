@@ -1,7 +1,7 @@
 use std::{
+    borrow::ToOwned,
     sync::Arc,
     time::{Duration, Instant},
-    borrow::ToOwned,
 };
 
 use tokio::sync::Mutex;
@@ -115,7 +115,7 @@ impl Innertube {
                 if let Some(timestamp) = pair.value().timestamp() {
                     data.insert(
                         "playbackContext".to_owned(),
-                        json!({ "contentPlaybackContext": timestamp })
+                        json!({ "contentPlaybackContext": timestamp }),
                     );
                 } else {
                     continue;
@@ -123,7 +123,8 @@ impl Innertube {
             }
 
             // TODO: add retry, need to find example video of one first though
-            return self.build_request("player", config, &data.into())
+            return self
+                .build_request("player", config, &data.into())
                 .send()
                 .await?
                 .json::<Video>()
@@ -214,7 +215,7 @@ impl Innertube {
 
             Ok((
                 version.as_str().map(ToOwned::to_owned),
-                api_key.as_str().map(ToOwned::to_owned)
+                api_key.as_str().map(ToOwned::to_owned),
             ))
         } else {
             Err(Error::Cipher("failed to extract operations!".to_owned()))
@@ -225,7 +226,7 @@ impl Innertube {
         &self,
         endpoint: &str,
         config: &clients::ClientConfig,
-        data: &serde_json::Value
+        data: &serde_json::Value,
     ) -> RequestBuilder {
         let url = format!(r"https:\\{}/youtubei/v1/{}", config.hostname(), endpoint);
         self.http
