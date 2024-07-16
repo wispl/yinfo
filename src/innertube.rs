@@ -26,15 +26,9 @@ use crate::{
 };
 
 // Javascript player URL, this contains the code for ciphers used to decipher signatures
-pub struct PlayerUrl {
+struct PlayerUrl {
     url: String,
     expire_at: Instant,
-}
-
-impl Default for PlayerUrl {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl PlayerUrl {
