@@ -156,7 +156,6 @@ impl Innertube {
 
     // returns the cipher key and value pair Key is not needed but... avoids borrow issues here
     async fn get_cipher_pair(&self, player_url: &str) -> Result<Ref<String, Cipher>, Error> {
-        // TODO: investigat deadlock?
         match self.cipher_cache.entry(player_url.to_string()) {
             Entry::Vacant(entry) => {
                 let player_js = self.http.get(player_url).send().await?.text().await?;
@@ -193,42 +192,33 @@ impl Innertube {
             player_url.set_url(url);
         }
 
-        // TODO: cloning here is the easy out, check if we can return the mutex instead
         Ok(player_url.url.clone())
     }
 
-    // TODO: implement
-    // async fn get_ytcfg(&self) -> Result<(), Error> {
-    //     static YTCFG: Lazy<Regex> = Lazy::new(||
-    //         Regex::new(r"ytcfg\.set\((\{.+\})\);").unwrap()
-    //     );
-    //     let res = client.get("https://www.youtube.com")
-    //         .send()
-    //         .await?
-    //         .text()
-    //         .await?;
-    //
-    //     if let Some(cap) = YTCFG.captures(&res) {
-    //         let json: serde_json::Value = serde_json::from_str(&cap[1]).unwrap();
-    //         let client = &json["INNERTUBE_CONTEXT"]["client"];
-    //         let client_version = &client["clientVersion"];
-    //         let api_key = &json["INNERTUBE_API_KEY"];
-    //
-    //         let mut config = InnertubeClient::new(ClientType::Web);
-    //
-    //         if !client_version.is_null() {
-    //             config.client.version = client_version.as_str().unwrap().to_owned();
-    //         }
-    //
-    //         if !api_key.is_null() {
-    //             config.api_key = client_version.as_str().unwrap().to_owned();
-    //         }
-    //
-    //         Ok(config)
-    //     } else {
-    //         Err(Error::Cipher("failed to extract operations!".to_owned()))
-    //     }
-    // }
+    async fn get_ytcfg(&self) -> Result<(Option<String>, Option<String>), Error> {
+        static YTCFG: Lazy<Regex> = Lazy::new(|| Regex::new(r"ytcfg\.set\((\{.+\})\);").unwrap());
+        let res = self
+            .http
+            .get("https://www.youtube.com")
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        if let Some(cap) = YTCFG.captures(&res) {
+            let json: serde_json::Value = serde_json::from_str(&cap[1]).unwrap();
+            let client = &json["INNERTUBE_CONTEXT"]["client"];
+            let version = &client["clientVersion"];
+            let api_key = &json["INNERTUBE_API_KEY"];
+
+            Ok((
+                version.as_str().map(|s| s.to_owned()),
+                api_key.as_str().map(|s| s.to_owned())
+            ))
+        } else {
+            Err(Error::Cipher("failed to extract operations!".to_owned()))
+        }
+    }
 
     fn build_request(
         &self,
