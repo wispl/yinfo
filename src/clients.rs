@@ -7,9 +7,14 @@ const DEFAULT_USER_AGENT: &str =
 #[derive(Debug)]
 pub enum ClientType {
     Web,
+    WebEmbedded,
+    WebCreator,
     Android,
     AndroidEmbedded,
-    IOS,
+    AndroidCreator,
+    Ios,
+    IosEmbedded,
+    IosCreator,
 }
 
 #[derive(Debug)]
@@ -61,7 +66,16 @@ impl ClientConfig {
     pub fn is_base(&self) -> bool {
         matches!(
             self.client_type,
-            ClientType::Web | ClientType::Android | ClientType::IOS
+            ClientType::Web | ClientType::Android | ClientType::Ios
+        )
+    }
+
+    pub fn requires_player(&self) -> bool {
+        // some clients do not require player js for deciphering
+        matches!(
+            self.client_type,
+            ClientType::Android | ClientType::AndroidEmbedded | ClientType::AndroidCreator |
+            ClientType::Ios | ClientType::IosEmbedded | ClientType::IosCreator
         )
     }
 
@@ -108,6 +122,28 @@ impl ClientConfig {
                     sdk: None,
                 }
             },
+            ClientType::WebEmbedded => ClientConfig {
+                client_type,
+                api_key: "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
+                context_client_name: "56",
+                client: Client {
+                    name: "WEB_EMBEDDED_PLAYER",
+                    version: "1.20220731.00.00",
+                    user_agent: None,
+                    sdk: None,
+                }
+            },
+            ClientType::WebCreator => ClientConfig {
+                client_type,
+                api_key: "AIzaSyBUPetSUmoZL-OhlxA7wSac5XinrygCqMo",
+                context_client_name: "62",
+                client: Client {
+                    name: "WEB_CREATOR",
+                    version: "1.20220726.00.00",
+                    user_agent: None,
+                    sdk: None,
+                }
+            },
             ClientType::Android => ClientConfig {
                 client_type,
                 api_key: "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w",
@@ -130,7 +166,18 @@ impl ClientConfig {
                     user_agent: Some("com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip"),
                 }
             },
-            ClientType::IOS => ClientConfig {
+            ClientType::AndroidCreator => ClientConfig {
+                client_type,
+                api_key: "AIzaSyD_qjV8zaaUMehtLkrKFgVeSX_Iqbtyws8",
+                context_client_name: "14",
+                client: Client {
+                    name: "ANDROID_CREATOR",
+                    version: "22.30.100",
+                    sdk: Some(30),
+                    user_agent: Some("com.google.android.apps.youtube.creator/22.30.100 (Linux; U; Android 11) gzip"),
+                }
+            },
+            ClientType::Ios => ClientConfig {
                 client_type,
                 api_key: "AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc",
                 context_client_name: "5",
@@ -138,6 +185,28 @@ impl ClientConfig {
                     name: "IOS",
                     version: "19.09.3",
                     user_agent: Some("com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)"),
+                    sdk: None,
+                }
+            },
+            ClientType::IosEmbedded => ClientConfig {
+                client_type,
+                api_key: "AIzaSyDCU8hByM-4DrUqRUYnGn-3llEO78bcxq8",
+                context_client_name: "26",
+                client: Client {
+                    name: "IOS_MESSAGES_EXTENSION",
+                    version: "19.09.3",
+                    user_agent: Some("com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)"),
+                    sdk: None,
+                }
+            },
+            ClientType::IosCreator => ClientConfig {
+                client_type,
+                api_key: "AIzaSyDCU8hByM-4DrUqRUYnGn-3llEO78bcxq8",
+                context_client_name: "15",
+                client: Client {
+                    name: "IOS_CREATOR",
+                    version: "22.33.101",
+                    user_agent: Some("com.google.ios.ytcreator/22.33.101 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)"),
                     sdk: None,
                 }
             },
