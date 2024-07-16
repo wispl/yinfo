@@ -7,7 +7,7 @@ use yinfo::{
 async fn main() {
     let reqwest = reqwest::Client::new();
     let client = ClientConfig::new(ClientType::Web);
-    let innertube = Innertube::new(reqwest.clone(), client).unwrap();
+    let innertube = Innertube::new(reqwest.clone(), vec![client]).unwrap();
 
     let video = innertube.info("RhmHSAClG1c").await.unwrap();
     println!("{:#?}", video);

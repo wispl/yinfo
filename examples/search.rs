@@ -9,7 +9,7 @@ use std::time::Instant;
 async fn main() {
     let reqwest = reqwest::Client::new();
     let client = ClientConfig::new(ClientType::Web);
-    let innertube = Innertube::new(reqwest.clone(), client).unwrap();
+    let innertube = Innertube::new(reqwest.clone(), vec![client]).unwrap();
 
     let before = Instant::now();
     let search = innertube.search("sabaton to hell and back").await.unwrap();

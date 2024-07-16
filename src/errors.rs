@@ -24,4 +24,6 @@ pub enum Error {
     Unexpected(String),
     #[error("{0} is not a valid YouTube url")]
     NotYoutubeUrl(String),
+    #[error("failed to find any info for video")]
+    VideoInfo,
 }

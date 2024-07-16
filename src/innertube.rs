@@ -56,8 +56,8 @@ impl PlayerUrl {
 }
 
 pub struct Innertube {
-    client: clients::ClientConfig,
-    reqwest: Client,
+    configs: Vec<clients::ClientConfig>,
+    http: Client,
     js_runtime: AsyncRuntime,
 
     player_url: Arc<Mutex<PlayerUrl>>,
@@ -69,12 +69,12 @@ impl Innertube {
     ///
     /// This generally should not fail unless rquickjs fails to create a runtime,
     /// in which case out of memory is the case.
-    pub fn new(reqwest: Client, client: clients::ClientConfig) -> Result<Self, Error> {
+    pub fn new(http: Client, configs: Vec<clients::ClientConfig>) -> Result<Self, Error> {
         let js_runtime = AsyncRuntime::new().map_err(|e| Error::Unexpected(e.to_string()))?;
 
         Ok(Innertube {
-            reqwest,
-            client,
+            http,
+            configs,
             js_runtime,
             player_url: Arc::new(Mutex::new(PlayerUrl::new())),
             cipher_cache: DashMap::new(),
@@ -105,27 +105,31 @@ impl Innertube {
     /// indicates something in the library must be changed.
     pub async fn info(&self, video: &str) -> Result<Video, Error> {
         let video = get_video_id(video).ok_or(Error::NotYoutubeUrl(video.to_owned()))?;
-        let player_url = self.get_player_url().await?;
-        let pair = self.get_cipher_pair(&player_url).await?;
-        let cipher = pair.value();
 
-        // TODO: drop cipher after this
-        let timestamp = json!({ "signatureTimestamp": cipher.timestamp() });
+        for config in &self.configs {
+            let player_url = self.get_player_url().await?;
+            let pair = self.get_cipher_pair(&player_url).await?;
+            let cipher = pair.value();
 
-        let data = json!({
-            "videoId": video,
-            "context": self.client.context_json(),
-            "playbackContext": json!({ "contentPlaybackContext": timestamp }),
-            "contentCheckOk": true,
-            "racyCheckOk": true,
-        });
+            // TODO: drop cipher after this
+            let timestamp = json!({ "signatureTimestamp": cipher.timestamp() });
 
-        self.build_request("player", &data)
-            .send()
-            .await?
-            .json::<Video>()
-            .await
-            .map_err(Error::Request)
+            let data = json!({
+                "videoId": video,
+                "context": config.context_json(),
+                "playbackContext": json!({ "contentPlaybackContext": timestamp }),
+                "contentCheckOk": true,
+                "racyCheckOk": true,
+            });
+
+            return self.build_request("player", config, &data)
+                .send()
+                .await?
+                .json::<Video>()
+                .await
+                .map_err(Error::Request);
+        }
+        Err(Error::VideoInfo)
     }
 
     /// # Errors
@@ -133,14 +137,16 @@ impl Innertube {
     /// This may fail as a result of a network error. Cipher and json errors are unexpected and
     /// indicates something in the library must be changed.
     pub async fn search(&self, query: &str) -> Result<Vec<String>, Error> {
+        // TODO: just use the first one for now, subject to change of course
+        let config = self.configs.first().unwrap();
         let data = json!({
             "query": query,
-            "context": self.client.context_json(),
+            "context": config.context_json(),
             "params": "EgIQAfABAQ==",
         });
 
         Ok(self
-            .build_request("search", &data)
+            .build_request("search", config, &data)
             .send()
             .await?
             .json::<WebSearch>()
@@ -153,7 +159,7 @@ impl Innertube {
         // TODO: investigat deadlock?
         match self.cipher_cache.entry(player_url.to_string()) {
             Entry::Vacant(entry) => {
-                let player_js = self.reqwest.get(player_url).send().await?.text().await?;
+                let player_js = self.http.get(player_url).send().await?.text().await?;
                 Ok(entry.insert(Cipher::new(&player_js)).downgrade())
             }
             Entry::Occupied(entry) => Ok(entry.into_ref().downgrade()),
@@ -164,7 +170,7 @@ impl Innertube {
         let mut player_url = self.player_url.lock().await;
         if player_url.is_expired() {
             let res = self
-                .reqwest
+                .http
                 .get("https://www.youtube.com/embed/")
                 .send()
                 .await?
@@ -224,19 +230,20 @@ impl Innertube {
     //     }
     // }
 
-    fn build_request(&self, endpoint: &str, data: &serde_json::Value) -> RequestBuilder {
-        let url = format!(
-            r"https:\\{}/youtubei/v1/{}",
-            self.client.hostname(),
-            endpoint
-        );
-        let mut headers = self.client.headers();
-        let origin = format!(r"https:\\{}", self.client.hostname());
+    fn build_request(
+        &self,
+        endpoint: &str,
+        config: &clients::ClientConfig,
+        data: &serde_json::Value
+    ) -> RequestBuilder {
+        let url = format!(r"https:\\{}/youtubei/v1/{}", config.hostname(), endpoint);
+        let mut headers = config.headers();
+        let origin = format!(r"https:\\{}", config.hostname());
         headers.insert("Origin", HeaderValue::from_str(&origin).unwrap());
-        self.reqwest
+        self.http
             .post(url)
-            .headers(self.client.headers())
-            .query(&[("key", self.client.api_key()), ("prettyPrint", "false")])
+            .headers(headers)
+            .query(&[("key", config.api_key()), ("prettyPrint", "false")])
             .json(data)
     }
 }
