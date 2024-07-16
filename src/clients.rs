@@ -52,7 +52,7 @@ impl ClientConfig {
                 "thirdParty".to_owned(),
                 json!({ "embedUrl": "https://www.youtube.com/" }),
             );
-        } else {
+        } else if self.is_embed() {
             context.insert(
                 "thirdParty".to_owned(),
                 json!({ "embedUrl": "https://www.youtube.com/" }),
@@ -70,6 +70,13 @@ impl ClientConfig {
         )
     }
 
+    pub fn is_embed(&self) -> bool {
+        matches!(
+            self.client_type,
+            ClientType::WebEmbedded | ClientType::AndroidEmbedded | ClientType::IosEmbedded
+        )
+    }
+
     pub fn requires_player(&self) -> bool {
         // some clients do not require player js for deciphering
         !matches!(
@@ -80,6 +87,7 @@ impl ClientConfig {
                 | ClientType::Ios
                 | ClientType::IosEmbedded
                 | ClientType::IosCreator
+                | ClientType::WebCreator
         )
     }
 
