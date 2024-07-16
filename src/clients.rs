@@ -72,7 +72,7 @@ impl ClientConfig {
 
     pub fn requires_player(&self) -> bool {
         // some clients do not require player js for deciphering
-        matches!(
+        !matches!(
             self.client_type,
             ClientType::Android | ClientType::AndroidEmbedded | ClientType::AndroidCreator |
             ClientType::Ios | ClientType::IosEmbedded | ClientType::IosCreator
