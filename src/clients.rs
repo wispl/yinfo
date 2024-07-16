@@ -89,6 +89,8 @@ impl ClientConfig {
             "user-agent",
             HeaderValue::from_static(self.client.user_agent.unwrap_or(DEFAULT_USER_AGENT)),
         );
+        let origin = format!(r"https:\\{}", self.hostname());
+        headers.insert("origin", HeaderValue::from_str(&origin).unwrap());
 
         headers
     }

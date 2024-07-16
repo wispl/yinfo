@@ -5,7 +5,7 @@ use std::{
 
 use tokio::sync::Mutex;
 
-use reqwest::{header::HeaderValue, Client, RequestBuilder};
+use reqwest::{Client, RequestBuilder};
 
 use serde_json::json;
 
@@ -237,12 +237,9 @@ impl Innertube {
         data: &serde_json::Value
     ) -> RequestBuilder {
         let url = format!(r"https:\\{}/youtubei/v1/{}", config.hostname(), endpoint);
-        let mut headers = config.headers();
-        let origin = format!(r"https:\\{}", config.hostname());
-        headers.insert("Origin", HeaderValue::from_str(&origin).unwrap());
         self.http
             .post(url)
-            .headers(headers)
+            .headers(config.headers())
             .query(&[("key", config.api_key()), ("prettyPrint", "false")])
             .json(data)
     }
