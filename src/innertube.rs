@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 
 use reqwest::{Client, RequestBuilder};
 
-use serde_json::json;
+use serde_json::{json, Map};
 
 use dashmap::{mapref::one::Ref, DashMap, Entry};
 use rquickjs::{async_with, AsyncContext, AsyncRuntime};
@@ -107,22 +107,27 @@ impl Innertube {
         let video = get_video_id(video).ok_or(Error::NotYoutubeUrl(video.to_owned()))?;
 
         for config in &self.configs {
-            let player_url = self.get_player_url().await?;
-            let pair = self.get_cipher_pair(&player_url).await?;
-            let cipher = pair.value();
+            let mut data = Map::new();
+            data.insert("videoId".to_owned(), video.into());
+            data.insert("context".to_owned(), config.context_json());
+            data.insert("contentCheckOk".to_owned(), true.into());
+            data.insert("racyCheckOk".to_owned(), true.into());
 
-            // TODO: drop cipher after this
-            let timestamp = json!({ "signatureTimestamp": cipher.timestamp() });
+            if config.requires_player() {
+                let player_url = self.get_player_url().await?;
+                let pair = self.get_cipher_pair(&player_url).await?;
 
-            let data = json!({
-                "videoId": video,
-                "context": config.context_json(),
-                "playbackContext": json!({ "contentPlaybackContext": timestamp }),
-                "contentCheckOk": true,
-                "racyCheckOk": true,
-            });
+                if let Some(timestamp) = pair.value().timestamp() {
+                    data.insert(
+                        "playbackContext".to_owned(),
+                        json!({ "contentPlaybackContext": timestamp })
+                    );
+                } else {
+                    continue;
+                }
+            }
 
-            return self.build_request("player", config, &data)
+            return self.build_request("player", config, &data.into())
                 .send()
                 .await?
                 .json::<Video>()
