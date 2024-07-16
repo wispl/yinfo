@@ -57,6 +57,8 @@ pub struct Innertube {
 
     player_url: Arc<Mutex<PlayerUrl>>,
     cipher_cache: DashMap<String, Cipher>,
+    // always use web config for searching
+    web_config: clients::ClientConfig,
 }
 
 impl Innertube {
@@ -73,6 +75,7 @@ impl Innertube {
             js_runtime,
             player_url: Arc::new(Mutex::new(PlayerUrl::new())),
             cipher_cache: DashMap::new(),
+            web_config: clients::ClientConfig::new(clients::ClientType::Web),
         })
     }
 
@@ -140,15 +143,14 @@ impl Innertube {
     /// indicates something in the library must be changed.
     pub async fn search(&self, query: &str) -> Result<Vec<String>, Error> {
         // TODO: just use the first one for now, subject to change of course
-        let config = self.configs.first().unwrap();
         let data = json!({
             "query": query,
-            "context": config.context_json(),
+            "context": self.web_config.context_json(),
             "params": "EgIQAfABAQ==",
         });
 
         Ok(self
-            .build_request("search", config, &data)
+            .build_request("search", &self.web_config, &data)
             .send()
             .await?
             .json::<WebSearch>()
