@@ -7,6 +7,7 @@ use crate::mime::Mime;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Video {
+    pub response_context: ResponseContext,
     pub playability_status: PlayabilityStatus,
     pub video_details: VideoDetails,
     pub streaming_data: StreamData,
@@ -57,6 +58,25 @@ impl Video {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ResponseContext {
+    pub visitor_data: String,
+    pub service_tracking_params: Vec<ServiceParams>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ServiceParams {
+    pub service: String,
+    pub params: Vec<ValuePair>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ValuePair {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VideoDetails {
     pub allow_ratings: bool,
     pub author: String,
@@ -66,7 +86,7 @@ pub struct VideoDetails {
     pub is_owner_viewing: bool,
     pub is_private: bool,
     pub is_unplugged_corpus: bool,
-    pub keywords: Vec<String>,
+    pub keywords: Option<Vec<String>>,
     pub length_seconds: String,
     pub short_description: String,
     #[serde(rename = "thumbnail")]
