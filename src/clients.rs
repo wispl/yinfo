@@ -23,7 +23,6 @@ struct Client {
 #[derive(Debug)]
 pub struct ClientConfig {
     client_type: ClientType,
-    // name: &'static str,
     api_key: &'static str,
     context_client_name: &'static str,
     client: Client,
@@ -98,7 +97,6 @@ impl ClientConfig {
         match client_type {
             ClientType::Web => ClientConfig {
                 client_type,
-                // name: "web",
                 api_key: "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
                 context_client_name: "1",
                 client: Client {
@@ -110,7 +108,6 @@ impl ClientConfig {
             },
             ClientType::Android => ClientConfig {
                 client_type,
-                // name: "android",
                 api_key: "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w",
                 context_client_name: "3",
                 client: Client {
@@ -122,7 +119,6 @@ impl ClientConfig {
             },
             ClientType::AndroidEmbedded => ClientConfig {
                 client_type,
-                // name: "android_embedded",
                 api_key: "AIzaSyCjc_pVEDi4qsv5MtC2dMXzpIaDoRFLsxw",
                 context_client_name: "55",
                 client: Client {
@@ -134,7 +130,6 @@ impl ClientConfig {
             },
             ClientType::IOS => ClientConfig {
                 client_type,
-                // name: "ios",
                 api_key: "AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc",
                 context_client_name: "5",
                 client: Client {
