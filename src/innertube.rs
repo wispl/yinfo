@@ -128,14 +128,30 @@ impl Innertube {
                     continue;
                 }
             }
-            // TODO: add retry, need to find example video of one first though
-            return self
-                .build_request("player", config, &data.into())
+
+            let data = data.into();
+            // return if the request or deserialization fails as they are unexpected errors
+            let mut attempts = 0;
+            let mut res = self
+                .build_request("player", config, &data)
                 .send()
                 .await?
                 .json::<Video>()
-                .await
-                .map_err(Error::Request);
+                .await?;
+
+            while !video_valid(&res) && attempts < 3 {
+                attempts += 1;
+                res = self
+                    .build_request("player", config, &data)
+                    .send()
+                    .await?
+                    .json::<Video>()
+                    .await?;
+            }
+
+            if video_valid(&res) {
+                return Ok(res);
+            }
         }
         Err(Error::VideoInfo)
     }
@@ -268,6 +284,29 @@ fn get_video_id(url: &str) -> Option<&str> {
         return Some(url);
     }
     None
+}
+
+fn video_valid(video: &Video) -> bool {
+    // TODO: does both tokens have to exist?
+    video
+        .response_context
+        .service_tracking_params
+        .iter()
+        .find(|service| service.service == "GFEEDBACK")
+        .map(|service| {
+            service
+                .params
+                .iter()
+                .find(|param| param.key == "e")
+                .map(|param| {
+                    param
+                        .value
+                        .split(',')
+                        .any(|x| x == "51217102" || x == "51217476")
+                })
+        })
+        .flatten()
+        .unwrap_or(false)
 }
 
 #[cfg(test)]
