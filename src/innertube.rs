@@ -139,7 +139,7 @@ impl Innertube {
                 .json::<Video>()
                 .await?;
 
-            while !video_valid(&res) && attempts < 3 {
+            while video_invalid(&res) && attempts < 3 {
                 attempts += 1;
                 res = self
                     .build_request("player", config, &data)
@@ -149,7 +149,7 @@ impl Innertube {
                     .await?;
             }
 
-            if video_valid(&res) {
+            if !video_invalid(&res) {
                 return Ok(res);
             }
         }
@@ -261,7 +261,7 @@ fn get_video_id(url: &str) -> Option<&str> {
     None
 }
 
-fn video_valid(video: &Video) -> bool {
+fn video_invalid(video: &Video) -> bool {
     // TODO: does both tokens have to exist?
     video
         .response_context
