@@ -118,13 +118,16 @@ impl Innertube {
                 if let Some(timestamp) = pair.value().timestamp() {
                     data.insert(
                         "playbackContext".to_owned(),
-                        json!({ "contentPlaybackContext": timestamp }),
+                        json!({
+                            "contentPlaybackContext": {
+                                "signatureTimestamp": timestamp,
+                            }
+                        }),
                     );
                 } else {
                     continue;
                 }
             }
-
             // TODO: add retry, need to find example video of one first though
             return self
                 .build_request("player", config, &data.into())
