@@ -161,7 +161,6 @@ impl Innertube {
     /// This may fail as a result of a network error. Cipher and json errors are unexpected and
     /// indicates something in the library must be changed.
     pub async fn search(&self, query: &str) -> Result<Vec<String>, Error> {
-        // TODO: just use the first one for now, subject to change of course
         let data = json!({
             "query": query,
             "context": self.web_config.context_json(),
@@ -268,7 +267,7 @@ fn video_invalid(video: &Video) -> bool {
         .service_tracking_params
         .iter()
         .find(|service| service.service == "GFEEDBACK")
-        .map(|service| {
+        .and_then(|service| {
             service
                 .params
                 .iter()
@@ -280,7 +279,6 @@ fn video_invalid(video: &Video) -> bool {
                         .any(|x| x == "51217102" || x == "51217476")
                 })
         })
-        .flatten()
         .unwrap_or(false)
 }
 
