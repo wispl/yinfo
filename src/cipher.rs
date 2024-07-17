@@ -75,35 +75,33 @@ impl Cipher {
             .as_ref()
             .map(|x| parse(x.as_bytes()).collect::<QueryMap<'_>>());
 
-        if let Some(map) = signature_map {
-            let url = map.get("url").ok_or(Error::MissingField(
-                "url parameter",
-                "VideoFormat.signature",
-            ))?;
-            let mut url = Url::parse(url)?;
-            let mut queries: QueryMap<'_> = url.query_pairs().collect();
-
-            if let Some(s) = map.get("s") {
-                let sp = map.get("sp").unwrap_or(&Cow::Borrowed("signature"));
-                let result = self.apply_operations(s)?;
-                queries.insert(sp.clone(), Cow::Owned(result));
-            }
-
-            if let Some(n) = queries.get("n") {
-                let result = self.apply_nfunc(context, n)?;
-                queries.insert(Cow::Borrowed("n"), Cow::Owned(result));
-            }
-            let queries = Serializer::new(String::new())
-                .extend_pairs(queries.iter())
-                .finish();
-            url.set_query(Some(&queries));
-            Ok(url.into())
+        let (url, sp, s) = if let Some(mut map) = signature_map {
+            // TODO: check if url is guranteed to exist in signature
+            (map.remove("url"), map.remove("sp"), map.remove("s"))
         } else {
-            format
-                .url
-                .clone()
-                .ok_or(Error::MissingField("url", "VideoFormat"))
+            (format.url.as_deref().map(Cow::Borrowed), None, None)
+        };
+        let url = url.ok_or(Error::MissingField("url", "VideoFormat"))?;
+
+        let mut url = Url::parse(&url)?;
+        let mut queries: QueryMap<'_> = url.query_pairs().collect();
+
+        if let Some(n) = queries.get("n") {
+            let result = self.apply_nfunc(context, n)?;
+            queries.insert(Cow::Borrowed("n"), Cow::Owned(result));
         }
+
+        if let Some(s) = s {
+            let sp = sp.unwrap_or(Cow::Borrowed("signature"));
+            let result = self.apply_operations(s.as_ref())?;
+            queries.insert(sp.clone(), Cow::Owned(result));
+        }
+
+        let queries = Serializer::new(String::new())
+            .extend_pairs(queries.iter())
+            .finish();
+        url.set_query(Some(&queries));
+        Ok(url.into())
     }
 
     fn apply_operations(&self, signature: &str) -> Result<String, Error> {
