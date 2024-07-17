@@ -218,31 +218,6 @@ impl Innertube {
         Ok(player_url.url.clone())
     }
 
-    async fn get_ytcfg(&self) -> Result<(Option<String>, Option<String>), Error> {
-        static YTCFG: Lazy<Regex> = Lazy::new(|| Regex::new(r"ytcfg\.set\((\{.+\})\);").unwrap());
-        let res = self
-            .http
-            .get("https://www.youtube.com")
-            .send()
-            .await?
-            .text()
-            .await?;
-
-        if let Some(cap) = YTCFG.captures(&res) {
-            let json: serde_json::Value = serde_json::from_str(&cap[1]).unwrap();
-            let client = &json["INNERTUBE_CONTEXT"]["client"];
-            let version = &client["clientVersion"];
-            let api_key = &json["INNERTUBE_API_KEY"];
-
-            Ok((
-                version.as_str().map(ToOwned::to_owned),
-                api_key.as_str().map(ToOwned::to_owned),
-            ))
-        } else {
-            Err(Error::Cipher("failed to extract operations!".to_owned()))
-        }
-    }
-
     fn build_request(
         &self,
         endpoint: &str,

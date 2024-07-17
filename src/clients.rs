@@ -4,7 +4,7 @@ use serde_json::{json, Map};
 const DEFAULT_USER_AGENT: &str =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36";
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ClientType {
     Web,
     WebEmbedded,
@@ -87,7 +87,6 @@ impl ClientConfig {
                 | ClientType::Ios
                 | ClientType::IosEmbedded
                 | ClientType::IosCreator
-                | ClientType::WebCreator
         )
     }
 
