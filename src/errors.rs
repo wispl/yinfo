@@ -5,8 +5,6 @@ pub enum Error {
     #[error("unable to send http request")]
     Request(#[from] reqwest::Error),
     #[error("unable to find player js url")]
-    PlayerJS,
-    #[error("unable to decipher signature: {0}")]
     Cipher(String),
     #[error("unable to extract nfunc")]
     NFuncExtraction,
