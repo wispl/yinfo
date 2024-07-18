@@ -187,28 +187,19 @@ impl Innertube {
                 }
             }
 
-            let data = data.into();
-            let mut attempts = 0;
-            let mut res = self
-                .build_request("player", config, &data)
-                .send()
-                .await?
-                .json::<Video>()
-                .await?;
-
             // TODO: also retry on http error?
-            while video_invalid(&res) && attempts < self.retry_limit {
-                attempts += 1;
-                res = self
+            let data = data.into();
+            for _attempt in 0..=self.retry_limit {
+                let res = self
                     .build_request("player", config, &data)
                     .send()
                     .await?
                     .json::<Video>()
                     .await?;
-            }
 
-            if !video_invalid(&res) {
-                return Ok(res);
+                if !video_invalid(&res) {
+                    return Ok(res);
+                }
             }
         }
         Err(Error::VideoInfo)
