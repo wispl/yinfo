@@ -113,6 +113,10 @@ impl Innertube {
 
             if config.requires_player() {
                 let player_url = self.get_player_url().await?;
+                if player_url.is_empty() {
+                    continue;
+                }
+
                 let pair = self.get_cipher_pair(&player_url).await?;
 
                 if let Some(timestamp) = pair.value().timestamp() {
@@ -199,10 +203,6 @@ impl Innertube {
                 .await?;
 
             let url = between(&res, "\"jsUrl\":\"", "\"");
-            if url.is_empty() {
-                return Err(Error::PlayerJS);
-            }
-
             let url = if url.starts_with("//") {
                 "https:".to_owned() + url
             } else if url.starts_with('/') {
