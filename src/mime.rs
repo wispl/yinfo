@@ -5,6 +5,14 @@ use serde::de::{self, Deserialize, Deserializer, Visitor};
 use crate::errors::Error;
 use crate::utils::between;
 
+/// Mime enum type for stream data. Streams can come in three types:
+/// audio-only, video-only, video with audio.
+/// For each type, codecs are given for both audio and video if they exist, along with the
+/// format/container of the stream.
+///
+/// The codecs and format implement ord so you can compare them to see which one is better.
+/// For [`Format`], it is best to keep it to audio-audio or video-video comparisons and not
+/// audio-video, which gets tricky, depending if you prefer audio or video formats more.
 #[derive(Debug, serde::Serialize)]
 pub enum Mime {
     Audio(Format, Acodec),
@@ -12,6 +20,8 @@ pub enum Mime {
 }
 
 impl Mime {
+    /// Gets the audio codec of the mime
+    #[must_use]
     pub fn acodec(&self) -> Option<Acodec> {
         match self {
             Mime::Audio(_, acodec) => Some(*acodec),
@@ -19,6 +29,8 @@ impl Mime {
         }
     }
 
+    /// Gets the video codec of the mime
+    #[must_use]
     pub fn vcodec(&self) -> Option<Vcodec> {
         match self {
             Mime::Audio(_, _) => None,
@@ -26,6 +38,8 @@ impl Mime {
         }
     }
 
+    /// Gets the format of the mime
+    #[must_use]
     pub fn format(&self) -> Format {
         match self {
             Mime::Audio(format, _) | Mime::Video(format, _, _) => *format,
@@ -44,6 +58,7 @@ impl FromStr for Mime {
         let split = input
             .find('/')
             .ok_or(Error::MimeParse("/", String::new()))?;
+
         match &input[..split] {
             "audio" => Ok(Mime::Audio(format, codecs.parse::<Acodec>()?)),
             "video" => {
@@ -56,7 +71,7 @@ impl FromStr for Mime {
                     Ok(Mime::Video(format, codecs.parse::<Vcodec>()?, None))
                 }
             }
-            _ => Err(Error::MimeParse("mime type", input[..split].to_owned())),
+            _ => Err(Error::MimeParse("valid mime string", input[..split].to_owned())),
         }
     }
 }
@@ -87,6 +102,7 @@ impl<'de> Deserialize<'de> for Mime {
     }
 }
 
+/// Format/container of a mime
 #[derive(Debug, Clone, Copy, serde::Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Format {
     Webm,
@@ -107,13 +123,13 @@ impl FromStr for Format {
     }
 }
 
+/// Video codec of a mime
 #[derive(Debug, Clone, Copy, serde::Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Vcodec {
+    AVC,
+    AV1,
     // prefer VP9 for now over AV1 due to lack of support for AV1
     VP9,
-    AV1,
-    // VP8
-    AVC,
 }
 
 impl FromStr for Vcodec {
@@ -132,6 +148,7 @@ impl FromStr for Vcodec {
     }
 }
 
+/// Audio codec of a mime
 #[derive(Debug, Clone, Copy, serde::Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Acodec {
     MP4A,
@@ -150,6 +167,7 @@ impl FromStr for Acodec {
         } else if input.starts_with("vorbis") {
             Ok(Acodec::Vorbis)
         } else if input.starts_with("mp4a.40.2") {
+            // special case of mp4a
             Ok(Acodec::AAC)
         } else if input.starts_with("mp4a") {
             Ok(Acodec::MP4A)
