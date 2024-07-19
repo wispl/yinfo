@@ -43,62 +43,23 @@ pub struct ClientConfig {
 
 impl ClientConfig {
     pub fn context_json(&self) -> serde_json::Value {
-        let mut context = Map::new();
-
         let mut client = serde_json::to_value(&self.client).unwrap();
         let map = client.as_object_mut().unwrap();
         map.insert("hl".to_owned(), "en".to_owned().into());
-
         if self.is_base() {
             map.insert("clientScreen".to_owned(), "EMBED".into());
-            context.insert(
-                "thirdParty".to_owned(),
-                json!({ "embedUrl": "https://www.youtube.com/" }),
-            );
-        } else if self.is_embed() {
-            context.insert(
-                "thirdParty".to_owned(),
-                json!({ "embedUrl": "https://www.youtube.com/" }),
-            );
         }
 
-        context.insert("client".to_owned(), client.into());
-        json!(context)
-    }
+        if self.is_base() || self.is_embed() {
+            return json!({
+                "client": client,
+                "thirdParty": {
+                    "embedUrl": "https://www.youtube.com/",
+                },
+            });
+        }
 
-    pub fn is_base(&self) -> bool {
-        matches!(
-            self.client_type,
-            ClientType::Web | ClientType::Android | ClientType::Ios
-        )
-    }
-
-    pub fn is_embed(&self) -> bool {
-        matches!(
-            self.client_type,
-            ClientType::WebEmbedded | ClientType::AndroidEmbedded | ClientType::IosEmbedded
-        )
-    }
-
-    pub fn requires_player(&self) -> bool {
-        // some clients do not require player js for deciphering
-        !matches!(
-            self.client_type,
-            ClientType::Android
-                | ClientType::AndroidEmbedded
-                | ClientType::AndroidCreator
-                | ClientType::Ios
-                | ClientType::IosEmbedded
-                | ClientType::IosCreator
-        )
-    }
-
-    pub fn hostname(&self) -> &str {
-        "www.youtube.com"
-    }
-
-    pub fn api_key(&self) -> &str {
-        self.api_key
+        json!({"client": client})
     }
 
     pub fn headers(&self) -> HeaderMap {
