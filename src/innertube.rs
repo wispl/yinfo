@@ -18,7 +18,7 @@ use regex::Regex;
 
 use crate::{
     cipher::Cipher,
-    clients::{ClientConfig,ClientType},
+    clients::{ClientConfig, ClientType},
     errors::Error,
     query::WebSearch,
     structs::{Video, VideoFormat},
@@ -63,7 +63,7 @@ pub struct Config {
     /// Defaults to creating a new instance
     pub http: Client,
     /// How many times to retry a request before skipping the config in use. Set to 0 to disable
-    /// retries.
+    /// retries. It is recommended to not set it too high.
     ///
     /// Defaults to 3
     pub retry_limit: i8,
@@ -140,7 +140,7 @@ impl Innertube {
             .map_err(|e| Error::Unexpected(e.to_string()))?;
 
         async_with!(context => |ctx| {
-            pair.value().apply(ctx, format)
+            pair.value().apply(&ctx, format)
         })
         .await
     }

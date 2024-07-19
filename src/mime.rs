@@ -2,8 +2,7 @@ use std::{fmt, str::FromStr};
 
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 
-use crate::errors::Error;
-use crate::utils::between;
+use crate::{errors::Error, utils::between};
 
 /// Mime enum type for stream data. Streams can come in three types:
 /// audio-only, video-only, video with audio.

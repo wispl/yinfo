@@ -14,9 +14,10 @@ pub struct Video {
 }
 
 impl Video {
+    /// Finds the best audio format for the given video, in general prefer:
+    /// audio quality > acodec > br > ext
     #[must_use]
     pub fn best_audio(&self) -> Option<&VideoFormat> {
-        // prefer audio quality > acodec > br > ext
         self.all_formats().max_by(|a, b| {
             if a.audio_quality != b.audio_quality {
                 return a.audio_quality.cmp(&b.audio_quality);
@@ -31,9 +32,10 @@ impl Video {
         })
     }
 
+    /// Finds the best video format for the given video, in general prefer:
+    /// video quality > acodec > br > ext
     #[must_use]
     pub fn best_video(&self) -> Option<&VideoFormat> {
-        // prefer quality > vcodec > br > ext
         self.all_formats().max_by(|a, b| {
             if a.quality != b.quality {
                 return a.quality.cmp(&b.quality);
@@ -48,6 +50,7 @@ impl Video {
         })
     }
 
+    /// Returns an iterator over all formats of the video
     pub fn all_formats(&self) -> impl Iterator<Item = &VideoFormat> {
         self.streaming_data
             .adaptive_formats
@@ -56,6 +59,7 @@ impl Video {
     }
 }
 
+/// Reponse context of the video, contains no immediately useful information for most users
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseContext {
@@ -75,6 +79,7 @@ pub struct ValuePair {
     pub value: String,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VideoDetails {

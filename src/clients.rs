@@ -1,6 +1,6 @@
 use reqwest::header::{HeaderMap, HeaderValue};
 use serde::Serialize;
-use serde_json::{json, Map};
+use serde_json::json;
 
 const DEFAULT_USER_AGENT: &str =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36";
@@ -146,6 +146,8 @@ impl ClientConfig {
         self.api_key
     }
 
+    /// Create a config from the given client type
+    #[allow(clippy::too_many_lines)]
     #[must_use]
     pub fn new(client_type: ClientType) -> Self {
         match client_type {
