@@ -5,6 +5,8 @@ use serde_json::{json, Map};
 const DEFAULT_USER_AGENT: &str =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36";
 
+/// Type of Innertube client. Some of the client types lack certain formats or have advantages,
+/// such as bypassing age-limit or not requiring a player js.
 #[derive(Debug, PartialEq)]
 pub enum ClientType {
     Web,
@@ -18,6 +20,7 @@ pub enum ClientType {
     IosCreator,
 }
 
+/// The inner client data, and the data sent as part of the request payload.
 #[derive(Debug, Serialize)]
 struct Client {
     #[serde(rename(serialize = "clientName"))]
@@ -42,6 +45,12 @@ pub struct ClientConfig {
 }
 
 impl ClientConfig {
+    /// Create json data required for sending a request.
+    ///
+    /// # Panics
+    ///
+    /// Should not be possible, the data is created at compile-time and is guranteed to exist.
+    #[must_use]
     pub fn context_json(&self) -> serde_json::Value {
         let mut client = serde_json::to_value(&self.client).unwrap();
         let map = client.as_object_mut().unwrap();
@@ -62,6 +71,13 @@ impl ClientConfig {
         json!({"client": client})
     }
 
+    /// Create headers required to make a request.
+    ///
+    /// # Panics
+    ///
+    /// Should not be possible, the hostname are static strings and it is guranteed to create a
+    /// string valid for [`HeaderValue`].
+    #[must_use]
     pub fn headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
 
@@ -84,6 +100,53 @@ impl ClientConfig {
         headers
     }
 
+    /// Return whether [`Self::config_type`] is a base type.
+    #[must_use]
+    pub fn is_base(&self) -> bool {
+        matches!(
+            self.client_type,
+            ClientType::Web | ClientType::Android | ClientType::Ios
+        )
+    }
+
+    /// Return whether [`Self::config_type`] is a embed variant type.
+    #[must_use]
+    pub fn is_embed(&self) -> bool {
+        matches!(
+            self.client_type,
+            ClientType::WebEmbedded | ClientType::AndroidEmbedded | ClientType::IosEmbedded
+        )
+    }
+
+    /// Return whether a request using this config requires a player js timestamp.
+    #[must_use]
+    pub fn requires_player(&self) -> bool {
+        // some clients do not require player js for deciphering
+        !matches!(
+            self.client_type,
+            ClientType::Android
+                | ClientType::AndroidEmbedded
+                | ClientType::AndroidCreator
+                | ClientType::Ios
+                | ClientType::IosEmbedded
+                | ClientType::IosCreator
+        )
+    }
+
+    /// Return the hostname related to this config's request.
+    #[must_use]
+    pub fn hostname(&self) -> &str {
+        // Todo: music
+        "www.youtube.com"
+    }
+
+    /// Return the api key related to this config's request.
+    #[must_use]
+    pub fn api_key(&self) -> &str {
+        self.api_key
+    }
+
+    #[must_use]
     pub fn new(client_type: ClientType) -> Self {
         match client_type {
             ClientType::Web => ClientConfig {
