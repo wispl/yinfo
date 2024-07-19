@@ -1,4 +1,5 @@
 use reqwest::header::{HeaderMap, HeaderValue};
+use serde::Serialize;
 use serde_json::{json, Map};
 
 const DEFAULT_USER_AGENT: &str =
@@ -17,12 +18,19 @@ pub enum ClientType {
     IosCreator,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct Client {
+    #[serde(rename(serialize = "clientName"))]
     name: &'static str,
+    #[serde(rename(serialize = "clientVersion"))]
     version: &'static str,
-    user_agent: Option<&'static str>,
+
+    #[serde(rename(serialize = "androidSdkVersion"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     sdk: Option<u8>,
+
+    #[serde(skip_serializing)]
+    user_agent: Option<&'static str>,
 }
 
 #[derive(Debug)]
@@ -37,17 +45,12 @@ impl ClientConfig {
     pub fn context_json(&self) -> serde_json::Value {
         let mut context = Map::new();
 
-        let mut client = Map::new();
-        client.insert("clientName".to_owned(), self.client.name.into());
-        client.insert("clientVersion".to_owned(), self.client.version.into());
-        client.insert("hl".to_owned(), "en".to_owned().into());
-
-        if let Some(sdk) = self.client.sdk {
-            client.insert("androidSdkVersion".to_owned(), sdk.into());
-        }
+        let mut client = serde_json::to_value(&self.client).unwrap();
+        let map = client.as_object_mut().unwrap();
+        map.insert("hl".to_owned(), "en".to_owned().into());
 
         if self.is_base() {
-            client.insert("clientScreen".to_owned(), "EMBED".into());
+            map.insert("clientScreen".to_owned(), "EMBED".into());
             context.insert(
                 "thirdParty".to_owned(),
                 json!({ "embedUrl": "https://www.youtube.com/" }),
