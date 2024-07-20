@@ -1,4 +1,4 @@
-use yinfo::innertube::{Innertube, Config};
+use yinfo::{Config, Innertube};
 
 #[tokio::main]
 async fn main() {
