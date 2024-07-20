@@ -56,16 +56,16 @@ impl PlayerUrl {
 pub struct Config {
     /// Configs to use for requests, the given order is the same order used when querying the api.
     ///
-    /// Defaults to Ios and Web, same as yt-dlp
+    /// Defaults to Ios and Web, same as yt-dlp.
     pub configs: Vec<ClientConfig>,
     /// [`reqwest::Client`] to use
     ///
-    /// Defaults to creating a new instance
+    /// Defaults to creating a new instance.
     pub http: Client,
     /// How many times to retry a request before skipping the config in use. Set to 0 to disable
-    /// retries. It is recommended to not set it too high.
+    /// retries. It is recommended to not set this too high.
     ///
-    /// Defaults to 3
+    /// Defaults to 3.
     pub retry_limit: i8,
 }
 
@@ -82,12 +82,10 @@ impl Default for Config {
     }
 }
 
-/// Main structure used for sending requests using the Innertube api. Retries and caching is
-/// handled by this structure so reusing the same instance for multiple requests is recommended.
-/// Namely, ciphers, solutions to the ciphered stream urls, are cached as computing them is not
-/// cheap, requiring the use of multiple source scans and a javascript evaluator.
+/// Main structure used for sending requests using the Innertube api.
 ///
-/// Use an [`std::sync::Arc`] if threading is required.
+/// Retries and caching are handled by this structure so reusing the same instance for multiple
+/// requests is recommended.
 pub struct Innertube {
     configs: Vec<ClientConfig>,
     web_config: ClientConfig,
@@ -101,7 +99,7 @@ pub struct Innertube {
 }
 
 impl Innertube {
-    /// Creates a new Innertube instance using the given config
+    /// Creates a new Innertube instance using the given config.
     ///
     /// # Errors
     ///
@@ -122,16 +120,17 @@ impl Innertube {
         })
     }
 
-    /// Deciphers a [`crate::structs::VideoFormat`] stream url. For some configs, Innertube responds
-    /// with a ciphered url. It is impossible to send a request there so we have to decipher it.
-    /// See [`crate::ciphers::Cipher`] for more information.
+    /// Deciphers a [`VideoFormat`] stream url. For some clients, Innertube responds
+    /// with a ciphered url, making it is impossible to send a request unless it is deciphered.
+    ///
+    /// See [`Cipher`] for more information.
     ///
     /// # Errors
     ///
-    /// This may fail if network requests or deserialization fails.
-    /// Errors can also arise if the url can not be deciphered.
-    /// An error from rquickjs is unexpected and should not happen.
+    /// This may fail if network requests or deserialization fails, the url can not be deciphered
+    /// or a quickjs context could not be created (unexpected).
     pub async fn decipher_format(&self, format: &VideoFormat) -> Result<String, Error> {
+        // TODO: handle cases where a player_js is not required
         let player_url = self.get_player_url().await?;
         let pair = self.get_cipher_pair(&player_url).await?;
 
@@ -145,15 +144,18 @@ impl Innertube {
         .await
     }
 
-    /// Queries the Innertube 'player' endpoint for information about a video.
-    /// If a request fails, it is retried up to [`Self::retry_limit`] times.
-    /// And if the request still fails, the next [`crate::clients::ClientConfig`] is used.
-    /// Use [`decipher_format()`] on a [`VideoFormat`] in the [`Video`] is stream url is needed.
+    /// Fetches information about a video, accepting either a valid url or video id.
+    ///
+    /// If a request fails, it is retried according to the configured retry limit.
+    /// And if the request still fails, the next [`ClientConfig`] is used.
+    ///
+    /// Use [`Self::decipher_format()`] on a [`VideoFormat`] in the [`Video`] if the stream url is
+    /// needed.
     ///
     /// # Errors
     ///
-    /// This may fail if network requests or deserialization fails. If no video info can be found,
-    /// an error is returned.
+    /// This may fail if network requests or deserialization fails, no video info could be found,
+    /// or the url is not valid.
     pub async fn info(&self, video: &str) -> Result<Video, Error> {
         let video = get_video_id(video).ok_or(Error::NotYoutubeUrl(video.to_owned()))?;
 
@@ -205,7 +207,8 @@ impl Innertube {
         Err(Error::VideoInfo)
     }
 
-    /// Queries the Innertube 'search' endpoint for search results, returning a list of video ids.
+    /// Fetches search results for the given query, returning a list of video ids.
+    ///
     /// This request is not guarded with methods like the one above so methods like multiple
     /// clients or retries are not required.
     ///
@@ -229,7 +232,7 @@ impl Innertube {
             .queries())
     }
 
-    /// Returns the cipher key for the given player url, creating one if it does not exist.
+    /// Return the cipher key for the given player url, creating one if it does not exist.
     async fn get_cipher_pair(&self, player_url: &str) -> Result<Ref<String, Cipher>, Error> {
         match self.cipher_cache.entry(player_url.to_string()) {
             Entry::Vacant(entry) => {
@@ -240,7 +243,7 @@ impl Innertube {
         }
     }
 
-    /// Gets the currently cached player js url, making a request to fetch it if it is expired.
+    /// Get the currently cached player js url, making a request to fetch it if it is expired.
     async fn get_player_url(&self) -> Result<String, Error> {
         let mut player_url = self.player_url.lock().await;
         if player_url.is_expired() {
@@ -261,7 +264,7 @@ impl Innertube {
                 url.to_owned()
             };
 
-            // Set it even if url is empty, handling the case later. This is to set the expiration
+            // Set it even if the url is empty, handling the case later. This is to set the expiration
             // so the client does not keep sending requests until they get ratelimited. If it
             // fails once, it is not going to succeed anytime soon.
             player_url.set_url(url);
@@ -270,7 +273,7 @@ impl Innertube {
         Ok(player_url.url.clone())
     }
 
-    /// Builds a request to be sent to the Innertube api
+    /// Build a request to be sent to the Innertube api
     fn build_request(
         &self,
         endpoint: &str,
@@ -286,7 +289,7 @@ impl Innertube {
     }
 }
 
-/// Attmpts to get the video id from a YouTube url
+/// Attempt to get the video id from a YouTube url
 fn get_video_id(url: &str) -> Option<&str> {
     // from: https://stackoverflow.com/questions/5830387/how-do-i-find-all-youtube-video-ids-in-a-string-using-a-regex?noredirect=1&lq=1
     // this is a little lax however, but should suffice for most cases
@@ -316,7 +319,7 @@ fn get_video_id(url: &str) -> Option<&str> {
     None
 }
 
-/// Checks if a video is invalid. A video is marked invalid if a set of tokens, 51217102 or
+/// Check if a video is invalid. A video is marked invalid if a set of tokens, 51217102 or
 /// 51217476 exist in the video, in which case any request results in a 403 error.
 fn video_invalid(video: &Video) -> bool {
     // TODO: do both tokens have to exist?

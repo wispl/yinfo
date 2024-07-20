@@ -4,8 +4,9 @@ use serde::de::{self, Deserialize, Deserializer, Visitor};
 
 use crate::{errors::Error, utils::between};
 
-/// Mime enum type for stream data. Streams can come in three types:
-/// audio-only, video-only, video with audio.
+/// Mime enum type for stream data.
+///
+/// Streams can come in three types:  audio-only,  video-only, or video with audio.
 /// For each type, codecs are given for both audio and video if they exist, along with the
 /// format/container of the stream.
 ///
@@ -19,7 +20,7 @@ pub enum Mime {
 }
 
 impl Mime {
-    /// Gets the audio codec of the mime
+    /// Gets the audio codec of the mime.
     #[must_use]
     pub fn acodec(&self) -> Option<Acodec> {
         match self {
@@ -28,7 +29,7 @@ impl Mime {
         }
     }
 
-    /// Gets the video codec of the mime
+    /// Gets the video codec of the mime.
     #[must_use]
     pub fn vcodec(&self) -> Option<Vcodec> {
         match self {
@@ -37,7 +38,7 @@ impl Mime {
         }
     }
 
-    /// Gets the format of the mime
+    /// Gets the format of the mime.
     #[must_use]
     pub fn format(&self) -> Format {
         match self {
@@ -70,7 +71,10 @@ impl FromStr for Mime {
                     Ok(Mime::Video(format, codecs.parse::<Vcodec>()?, None))
                 }
             }
-            _ => Err(Error::MimeParse("valid mime string", input[..split].to_owned())),
+            _ => Err(Error::MimeParse(
+                "valid mime string",
+                input[..split].to_owned(),
+            )),
         }
     }
 }
@@ -101,7 +105,7 @@ impl<'de> Deserialize<'de> for Mime {
     }
 }
 
-/// Format/container of a mime
+/// Format/container
 #[derive(Debug, Clone, Copy, serde::Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Format {
     Webm,
@@ -122,7 +126,7 @@ impl FromStr for Format {
     }
 }
 
-/// Video codec of a mime
+/// Video codec
 #[derive(Debug, Clone, Copy, serde::Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Vcodec {
     AVC,
@@ -147,7 +151,7 @@ impl FromStr for Vcodec {
     }
 }
 
-/// Audio codec of a mime
+/// Audio codec
 #[derive(Debug, Clone, Copy, serde::Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Acodec {
     MP4A,

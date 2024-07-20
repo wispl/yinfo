@@ -5,8 +5,14 @@ use serde_json::json;
 const DEFAULT_USER_AGENT: &str =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36";
 
-/// Type of Innertube client. Some of the client types lack certain formats or have advantages,
-/// such as bypassing age-limit or not requiring a player js.
+/// Type of Innertube client.
+///
+/// Some of the client types lack certain formats or have advantages, such as bypassing age-limit
+/// or not requiring a player js. Some differences are:
+///
+/// * Web clients require player js but iOS and Android clients do not.
+/// * iOS clients have HLS livestreams.
+/// * Android clients may have broken formats.
 #[derive(Debug, PartialEq)]
 pub enum ClientType {
     Web,
@@ -20,7 +26,7 @@ pub enum ClientType {
     IosCreator,
 }
 
-/// The inner client data, and the data sent as part of the request payload.
+/// The inner client data, used as part of the request payload.
 #[derive(Debug, Serialize)]
 struct Client {
     #[serde(rename(serialize = "clientName"))]
@@ -36,6 +42,7 @@ struct Client {
     user_agent: Option<&'static str>,
 }
 
+/// Configuration for the given [`ClientType`], containing information needed to make a request.
 #[derive(Debug)]
 pub struct ClientConfig {
     client_type: ClientType,
@@ -45,11 +52,11 @@ pub struct ClientConfig {
 }
 
 impl ClientConfig {
-    /// Create json data required for sending a request.
+    /// Creates json data required for sending a request.
     ///
     /// # Panics
     ///
-    /// Should not be possible, the data is created at compile-time and is guranteed to exist.
+    /// Should not be possible, the data is created at compile-time and is guaranteed to exist.
     #[must_use]
     pub fn context_json(&self) -> serde_json::Value {
         let mut client = serde_json::to_value(&self.client).unwrap();
@@ -71,11 +78,11 @@ impl ClientConfig {
         json!({"client": client})
     }
 
-    /// Create headers required to make a request.
+    /// Creates headers required to make a request.
     ///
     /// # Panics
     ///
-    /// Should not be possible, the hostname are static strings and it is guranteed to create a
+    /// Should not be possible, the hostname are static strings and it is guaranteed to create a
     /// string valid for [`HeaderValue`].
     #[must_use]
     pub fn headers(&self) -> HeaderMap {
@@ -100,7 +107,7 @@ impl ClientConfig {
         headers
     }
 
-    /// Return whether [`Self::config_type`] is a base type.
+    /// Returns whether the client type is a base type.
     #[must_use]
     pub fn is_base(&self) -> bool {
         matches!(
@@ -109,7 +116,7 @@ impl ClientConfig {
         )
     }
 
-    /// Return whether [`Self::config_type`] is a embed variant type.
+    /// Returns whether client type is an embed variant type.
     #[must_use]
     pub fn is_embed(&self) -> bool {
         matches!(
@@ -118,7 +125,7 @@ impl ClientConfig {
         )
     }
 
-    /// Return whether a request using this config requires a player js timestamp.
+    /// Returns whether a request using this config requires a player js timestamp.
     #[must_use]
     pub fn requires_player(&self) -> bool {
         // some clients do not require player js for deciphering
@@ -133,20 +140,20 @@ impl ClientConfig {
         )
     }
 
-    /// Return the hostname related to this config's request.
+    /// Returns the hostname related to this config's request.
     #[must_use]
     pub fn hostname(&self) -> &str {
         // Todo: music
         "www.youtube.com"
     }
 
-    /// Return the api key related to this config's request.
+    /// Returns the api key related to this config's request.
     #[must_use]
     pub fn api_key(&self) -> &str {
         self.api_key
     }
 
-    /// Create a config from the given client type
+    /// Creates a config from the given client type
     #[allow(clippy::too_many_lines)]
     #[must_use]
     pub fn new(client_type: ClientType) -> Self {

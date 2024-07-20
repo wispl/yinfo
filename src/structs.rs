@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::mime::Mime;
 
+/// Main structure for video details returned by `info()`.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Video {
@@ -15,7 +16,7 @@ pub struct Video {
 
 impl Video {
     /// Finds the best audio format for the given video, in general prefer:
-    /// audio quality > acodec > br > ext
+    /// audio quality > acodec > bitrate > extension.
     #[must_use]
     pub fn best_audio(&self) -> Option<&VideoFormat> {
         self.all_formats().max_by(|a, b| {
@@ -33,7 +34,7 @@ impl Video {
     }
 
     /// Finds the best video format for the given video, in general prefer:
-    /// video quality > acodec > br > ext
+    /// video quality > acodec > bitrate > extension.
     #[must_use]
     pub fn best_video(&self) -> Option<&VideoFormat> {
         self.all_formats().max_by(|a, b| {
@@ -50,7 +51,8 @@ impl Video {
         })
     }
 
-    /// Returns an iterator over all formats of the video
+    /// Returns an iterator over all formats of the video. Useful if you want to do manual filtering
+    /// or sorting over all formats.
     pub fn all_formats(&self) -> impl Iterator<Item = &VideoFormat> {
         self.streaming_data
             .adaptive_formats
@@ -59,7 +61,9 @@ impl Video {
     }
 }
 
-/// Reponse context of the video, contains no immediately useful information for most users
+/// Response context of the video, has no immediately useful information for most users.
+///
+/// This includes information about the request or ongoing YouTube experiments.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseContext {
@@ -116,17 +120,23 @@ pub struct Thumbnail {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayabilityStatus {
-    status: String,
-    playable_in_embed: Option<bool>,
+    pub status: String,
+    pub playable_in_embed: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StreamData {
+    /// These tend to be either audio or video only and are generally higher
     pub adaptive_formats: Vec<VideoFormat>,
+    /// These generally have both audio and video.
     pub formats: Option<Vec<VideoFormat>>,
 }
 
+/// Information about the stream and video format.
+///
+/// The [`Self::url`] is not how you stream or download the format. You must call
+/// [`crate::innertube::Innertube::decipher_format()`].
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VideoFormat {

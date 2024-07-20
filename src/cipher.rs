@@ -23,7 +23,7 @@ enum Operation {
 }
 
 impl Operation {
-    /// Create a new operation with the given definition and parameter. The definition is a slice
+    /// Creates a new operation with the given definition and parameter. The definition is a slice
     /// of the javascript code and the parameter is usually an integer.
     ///
     /// # Errors
@@ -57,9 +57,9 @@ impl Operation {
 }
 
 // TODO: might want an enum for this
-/// Contains the relevants data to solve a ciphered stream url for a given player url.
+/// Extracted information from a player js required for deciphering a [`VideoFormat`].
 ///
-/// Each player js code has a dedicated cipher for solving streams. When we make a request to this
+/// Each player js code has dedicated code for solving streams. When we make a request to this
 /// url, we get javascript code which has to be extracted. Three things are required:
 /// 1. a set of operations used for deciphering the signature of the stream url
 /// 2. a set of operations used for deciphering the ncode of the stream url
@@ -68,10 +68,10 @@ impl Operation {
 /// The timestamp is required for making requests to ensure the correct player js is in used
 /// for the request.
 ///
-/// The operations for the signature is mandatory for deciphering the stream and the ncode isn't
-/// not required but results in the url being throttled. The signature operations are relatively
+/// The operations for the signature are mandatory for deciphering the stream but the ncode is
+/// not required but results in the download being throttled. The signature operations are relatively
 /// short and can be translated natively, but the ncode operations are quite long which is why
-/// rquickjs is used to execute it.
+/// quickjs is used to execute it.
 pub struct Cipher {
     operations: Option<Vec<Operation>>,
     nfunc: Option<String>,
@@ -79,7 +79,7 @@ pub struct Cipher {
 }
 
 impl Cipher {
-    /// Create a cipher solution for the given url after parsing the code.
+    /// Creates a cipher solution for the given url after parsing the code.
     #[must_use]
     pub fn new(player_js: &str) -> Self {
         Cipher {
@@ -89,7 +89,7 @@ impl Cipher {
         }
     }
 
-    /// Return the timestamp associated with this player js
+    /// Returns the timestamp associated with this player js
     #[must_use]
     pub fn timestamp(&self) -> Option<&str> {
         self.timestamp.as_deref()
@@ -110,7 +110,7 @@ impl Cipher {
             .map(|x| parse(x.as_bytes()).collect::<QueryMap<'_>>());
 
         let (url, sp, s) = if let Some(mut map) = signature_map {
-            // TODO: check if url is guranteed to exist in signature
+            // TODO: check if url is guaranteed to exist in signature
             (map.remove("url"), map.remove("sp"), map.remove("s"))
         } else {
             (format.url.as_deref().map(Cow::Borrowed), None, None)
@@ -138,7 +138,6 @@ impl Cipher {
         Ok(url.into())
     }
 
-    /// Apply the signature operations
     fn apply_operations(&self, signature: &str) -> Result<String, Error> {
         let operations = self
             .operations
@@ -158,7 +157,6 @@ impl Cipher {
         Ok(chars.into_iter().collect())
     }
 
-    /// Apply the nfunc
     fn apply_nfunc(&self, ctx: &Ctx, nparam: &str) -> Result<String, Error> {
         let nfunc = self
             .nfunc
@@ -267,7 +265,7 @@ fn find_nfunc(js: &str) -> Option<&str> {
     }
 }
 
-/// Extract the entire nfunc, this always seems to have some form of enhanced_except at the end.
+/// Extract the entire nfunc, this always seems to have some form of enhanced except at the end.
 fn extract_nfunc(js: &str) -> Option<String> {
     let name = find_nfunc(js)?;
     let pattern = format!(
