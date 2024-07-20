@@ -115,7 +115,7 @@ impl Cipher {
         } else {
             (format.url.as_deref().map(Cow::Borrowed), None, None)
         };
-        let url = url.ok_or(Error::MissingField("url", "VideoFormat"))?;
+        let url = url.ok_or(Error::Cipher("No url found in video format".to_owned()))?;
 
         let mut url = Url::parse(&url)?;
         let mut queries: QueryMap<'_> = url.query_pairs().collect();
