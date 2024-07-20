@@ -12,8 +12,9 @@ This crate depends on [rquickjs](https://github.com/delskayn/rquickjs) and conse
 Notably, for Windows, the `patch` utility is needed.
 
 ```toml
-[dependencies]
-yinfo = "0.3"
+[dependencies.yinfo]
+git = "https://github.com/wispl/yinfo"
+branch = "main"
 ```
 
 ## Quick Example
