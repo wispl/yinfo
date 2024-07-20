@@ -14,7 +14,6 @@ Notably, for Windows, the `patch` utility is needed.
 ```toml
 [dependencies.yinfo]
 git = "https://github.com/wispl/yinfo"
-branch = "main"
 ```
 
 ## Quick Example
