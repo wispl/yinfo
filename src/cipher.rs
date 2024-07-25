@@ -237,51 +237,27 @@ fn extract_operations(js: &str) -> Option<Vec<Operation>> {
         .ok()
 }
 
-/// Find the name of nfunc, which contains operations to decipher the ncode.
-fn find_nfunc(js: &str) -> Option<&str> {
-    // The nfunc name can also be inside an array, so we also check for any indexing.
-    static NFUNC: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(
-            r#"(?x)(?:\.get\("n"\)\)&&\(b=|b=String\.fromCharCode\(110\),c=a\.get\(b\)\)&&\(c=)
-            (?P<nfunc>[a-zA-Z0-9$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)"#,
-        )
-        .unwrap()
-    });
-
-    let captures = NFUNC.captures(js)?;
-    let nfunc = captures.name("nfunc").unwrap().as_str();
-    if let Some(idx) = captures.name("idx") {
-        // Find the array definition and index it for the actual name.
-        let pattern = "var ".to_owned() + &escape(nfunc) + r"\s*=\s*\[(.+?)\]\s*[,;]";
-        let pattern = Regex::new(&pattern).unwrap();
-        if let Some(cap) = pattern.captures(js) {
-            let idx = idx.as_str().parse::<usize>().unwrap();
-            let word = cap.get(1).unwrap().as_str().split(',').nth(idx).unwrap();
-            return Some(word.trim());
-        }
-        None
-    } else {
-        Some(nfunc)
-    }
-}
-
 /// Extract the entire nfunc, this always seems to have some form of enhanced except at the end.
 fn extract_nfunc(js: &str) -> Option<String> {
-    let name = find_nfunc(js)?;
-    let pattern = format!(
-        r#"(?xs)
-        (?:
-            function\s+{0}|
-            [{{;,]\s*{0}\s*=\s*function|
-            (?:var|const|let)\s+{0}\s*=\s*function
-        )\s*
-        \((?P<args>[^)]*)\)\s*
-        (?P<code>\{{.*return\s*"enhanced_except.*?}}.+?}};)"#,
-        escape(name)
-    );
-    let pattern = Regex::new(&pattern).unwrap();
-    let captures = pattern.captures(js)?;
+    static NFUNC: &str = r#"(?xs)
+        function\((?P<args>[^)]*)\)\s*
+        (?P<code>
+         \{
+            var\s*[[:word:]]+\s*=\s*                            # word splitting
+            (?:
+                [[:word:]]+.split\(""\)
+                |
+                String\.prototype\.split\.call\([[:word:]]+,""\)
+            ),
+            .*                                                  # match whatever in between
+            return\s*"enhanced_except[^}]+}                     # enhanced_except
+            [^}]+                                               # match whatever until the end
+         };
+        )
+    "#;
+    static NFUNC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(NFUNC).unwrap());
 
+    let captures = NFUNC_RE.captures(js)?;
     if let (Some(args), Some(code)) = (captures.name("args"), captures.name("code")) {
         Some(format!("function({}){}", args.as_str(), code.as_str()))
     } else {
