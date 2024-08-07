@@ -13,7 +13,7 @@ Notably, for Windows, the `patch` utility is needed.
 
 ```toml
 [dependencies.yinfo]
-git = "https://github.com/wispl/yinfo"
+git = "https://github.com/wispl/yinfo.git"
 ```
 
 ## Quick Example
