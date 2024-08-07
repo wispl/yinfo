@@ -248,6 +248,8 @@ fn extract_nfunc(js: &str) -> Option<String> {
                 [[:word:]]+.split\(""\)
                 |
                 String\.prototype\.split\.call\([[:word:]]+,""\)
+                |
+                [[:word:]]+\.split\([[:word:]]+\.slice\(0,0\)\)
             ),
             .*                                                  # match whatever in between
             return\s*"enhanced_except[^}]+}                     # enhanced_except
